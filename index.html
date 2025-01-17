@@ -69,6 +69,13 @@
             }
             const result = document.getElementById("result");
             result.innerText = gpa.toFixed(2);
+
+            //set color to red if gpa < 2.0
+            if (gpa < 2.0) {
+                result.style.color = "red";
+            } else {
+                result.style.color = "";
+            }
         }
 
         function saveAllGradesToLocalStorage() {
@@ -218,6 +225,7 @@
         <article>
             <header>说明</header>
             <p>本计算器计算结果仅供参考，不作为最终成绩的评定标准。</p>
+            <footer><a href="https://github.com/gggxbbb/xhzmu-mz-GPA" target="_blank">GitHub</a></footer>
         </article>
 
     </main>
