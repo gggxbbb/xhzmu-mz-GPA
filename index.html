@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <title>徐医本麻学位绩点计算器</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="css/pico.min.css">
+
+    <script>
+
+        const classes = {
+            "大一下": [
+                ["人体系统解剖学", 6.5],
+                ["生物化学与分子生物学", 7.0]
+            ],
+            "大二上": [
+                ["病理学", 5.0],
+                ["医学微生物学与免疫学", 6.0],
+                ["麻醉生理学", 6.0]
+            ],
+            "大二下": [
+                ["病理生理学", 3.0],
+                ["麻醉解剖学", 5.5],
+                ["诊断学1", 2.5]
+            ],
+            "大三上": [
+                ["麻醉药理学", 5.0],
+                ["诊断学2", 4.5],
+                ["外科学1", 3.5]
+            ],
+            "大三下": [
+                ["麻醉设备学", 3.5],
+                ["麻醉机能实验学", 7.0],
+                ["内科学1", 5.5],
+                ["外科学2", 5.5]
+            ],
+            "大四上": [
+                ["危重病医学", 5.5],
+                ["内科学2", 5.0],
+                ["外科学3", 2.0],
+                ["妇产科学", 3.5],
+                ["儿科学", 5.0]
+            ],
+            "大四下": [
+                ["临床麻醉学", 6.0],
+                ["疼痛诊疗学", 2.0],
+                ["神经病学", 1.5]
+            ]
+        }
+
+        function calculateGPA() {
+            const inputs = document.querySelectorAll("input[type='number']");
+            let totalGrade = 0;
+            let totalCredit = 0;
+            for (let i = 0; i < inputs.length; i++) {
+                const input = inputs[i];
+                const credit = parseFloat(input.getAttribute("x-value"));
+                const grade = parseFloat(input.value);
+                if (isNaN(grade) || grade < 0 || grade > 100) {
+                    continue;
+                }
+                const gradeCreditValue = (grade - 50) / 10;
+                totalGrade += gradeCreditValue * credit;
+                totalCredit += credit;
+            }
+            let gpa = totalGrade / totalCredit;
+            if (isNaN(gpa)) {
+                gpa = 0.0;
+            }
+            const result = document.getElementById("result");
+            result.innerText = gpa.toFixed(2);
+        }
+
+        function saveAllGradesToLocalStorage() {
+            const inputs = document.querySelectorAll("input[type='number']");
+            let grades = {};
+            for (let i = 0; i < inputs.length; i++) {
+                const input = inputs[i];
+                const className = input.getAttribute("x-name");
+                const grade = input.value;
+                grades[className] = grade;
+            }
+            localStorage.setItem("grades", JSON.stringify(grades));
+        }
+
+        function loadAllGradesFromLocalStorage() {
+            const grades = JSON.parse(localStorage.getItem("grades"));
+            if (grades == null) {
+                return;
+            }
+            const inputs = document.querySelectorAll("input[type='number']");
+            for (let i = 0; i < inputs.length; i++) {
+                const input = inputs[i];
+                const className = input.getAttribute("x-name");
+                const grade = grades[className];
+                if (grade != null) {
+                    input.value = grade;
+                }
+            }
+        }
+
+        function setupInputEvents() {
+            const inputs = document.querySelectorAll("input[type='number']");
+            for (let i = 0; i < inputs.length; i++) {
+                const input = inputs[i];
+                input.addEventListener("input", function () {
+                    calculateGPA();
+                    saveAllGradesToLocalStorage();
+                });
+            }
+        }
+
+        function getInputElement(classGrade, className, classValue) {
+            const rootForm = document.createElement("form");
+
+            const rootFieldset = document.createElement("fieldset");
+            rootFieldset.setAttribute("role", "group");
+            rootFieldset.setAttribute("aria-labelledby", className);
+            rootFieldset.setAttribute("class", "grade-form");
+
+            const label = document.createElement("label");
+            label.setAttribute("for", className);
+            label.setAttribute("class", "grade-label");
+            label.innerText = className + " (" + classValue + ")";
+            rootFieldset.appendChild(label);
+
+            const input = document.createElement("input");
+            input.setAttribute("type", "number");
+            input.setAttribute("step", "1");
+            input.setAttribute("min", "0");
+            input.setAttribute("max", "100");
+            input.setAttribute("x-value", classValue);
+            input.setAttribute("x-name", className);
+            rootFieldset.appendChild(input);
+
+            rootForm.appendChild(rootFieldset);
+
+            return rootForm;
+        }
+
+        function getGradeAccordion(gradeName, gradeClasses) {
+            const rootAccordion = document.createElement("details");
+
+            const rootSummary = document.createElement("summary");
+            rootSummary.innerText = gradeName;
+            rootAccordion.appendChild(rootSummary);
+
+            for (let i = 0; i < gradeClasses.length; i++) {
+                const className = gradeClasses[i][0];
+                const classValue = gradeClasses[i][1];
+                const classGrade = getInputElement(gradeName, className, classValue);
+                rootAccordion.appendChild(classGrade);
+            }
+
+            return rootAccordion;
+        }
+
+    </script>
+
+    <style>
+        .grade-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .grade-label {
+            margin-bottom: 0.5em;
+            font-weight: bold;
+            /* 上下居中, 靠左对齐 */
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            /* 左边距 */
+            padding-left: 0.5em;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 0.5em;
+            margin-bottom: 1em;
+            border: 1px solid #ccc;
+            border-radius: 0.25em;
+            box-sizing: border-box;
+            /* 文本对齐 */
+            text-align: center;
+        }
+
+        #show_result {
+            text-align: center;
+        }
+
+        #result {
+            font-size: 5em;
+            font-weight: bold;
+        }
+
+        summary {
+            padding: 0.5em;
+        }
+    </style>
+
+</head>
+
+<body>
+    <main class="container">
+        <h1>徐医本麻学位绩点计算器</h1>
+
+        <article id="show_result">
+            <header>您的学位绩点为</header>
+            <p id="result">0.00</p>
+        </article>
+
+        <article id="scores">
+            <header>成绩单</header>
+            <footer>点击右侧箭头展开或折叠各学期成绩，暂无成绩的科目留空。已填写的成绩将保存在本地。</footer>
+        </article>
+
+        <article>
+            <header>说明</header>
+            <p>本计算器计算结果仅供参考，不作为最终成绩的评定标准。</p>
+        </article>
+
+    </main>
+
+    <script>
+
+        const root = document.getElementById("scores");
+        const footer = root.querySelector("footer");
+        //remove footer
+        root.removeChild(footer);
+        const gradeKeys = Object.keys(classes);
+        for (let i = 0; i < gradeKeys.length; i++) {
+            const gradeName = gradeKeys[i];
+            const gradeClasses = classes[gradeName];
+            const gradeAccordion = getGradeAccordion(gradeName, gradeClasses);
+            root.appendChild(gradeAccordion);
+        }
+        //add footer
+        root.appendChild(footer);
+
+        loadAllGradesFromLocalStorage();
+        setupInputEvents();
+        calculateGPA();
+
+    </script>
+
+</body>
+
+</html>
