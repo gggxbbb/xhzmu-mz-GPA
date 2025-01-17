@@ -2,14 +2,15 @@
 <html lang="zh-CN">
 
 <head>
-    <title>徐医本麻学位绩点计算器</title>
+    <title>学位绩点计算器</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="css/pico.min.css">
 
     <script>
 
-        const classes = {
+        const defaultClassesName = "徐医本麻"
+        const defaultClasses = {
             "大一下": [
                 ["人体系统解剖学", 6.5],
                 ["生物化学与分子生物学", 7.0]
@@ -182,6 +183,11 @@
             padding-left: 0.5em;
         }
 
+        #config_name_form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
         input[type="number"] {
             width: 100%;
             padding: 0.5em;
@@ -205,13 +211,30 @@
         summary {
             padding: 0.5em;
         }
+
+        #err_msg {
+            margin-top: 1em;
+            font-size: 0.8em;
+            color: red;
+            /* 边框 */
+            border-top: 1px solid #ccc;
+            padding-top: 1em;
+
+        }
+
+        pre {
+            background-color: #f8f8f8;
+            padding: 1em;
+            border-radius: 0.25em;
+            overflow: auto;
+        }
     </style>
 
 </head>
 
 <body>
     <main class="container">
-        <h1>徐医本麻学位绩点计算器</h1>
+        <h1><span id="name_show"></span>学位绩点计算器</h1>
 
         <article id="show_result">
             <header>您的学位绩点为</header>
@@ -226,8 +249,80 @@
         <article>
             <header>说明</header>
             <p>本计算器计算结果仅供参考，不作为最终成绩的评定标准。</p>
+            <p>计算公式：绩点 = Σ(学分 * (成绩 - 50) / 10) / Σ学分</p>
+
+            <details>
+                <summary>自定义配置文件</summary>
+                <p class="config">您可以通过修改下面的配置文件来自定义课程和学分。配置文件格式为：</p>
+                <pre class="config">
+{
+    "年级1": [
+        ["课程1", 学分1],
+        ["课程2", 学分2]
+    ],
+    ...
+}
+                </pre>
+                <form class="config">
+                    <fieldset role="group" id="config_name_form">
+                        <label class="config">名称</label>
+                        <input type="text" id="config_name" class="config">
+                    </fieldset>
+                    <fieldset>
+                        <legend class="config">配置文件</legend>
+                        <textarea id="config_text" rows="10" cols="50" class="config"></textarea>
+                    </fieldset>
+                    <div role="group" class="config">
+                        <input role="button" id="config_reset" type="button" value="重置" class="contrast config">
+                        <input role="button" id="config_save" type="button" value="保存" class="config">
+                    </div>
+                </form>
+                <p>配置文件将保存在本地。修改配置文件时，同名课程成绩将保留。</p>
+            </details>
+
+            <details>
+                <summary>工具</summary>
+                <div role="group">
+                    <button role="button" class="contrast" id="reset">清除本地数据</button>
+                    <button role="button" id="reset_scores">仅清除成绩</button>
+                </div>
+            </details>
+
             <footer><a href="https://github.com/gggxbbb/xhzmu-mz-GPA" target="_blank">GitHub</a></footer>
         </article>
+
+        <script>
+            document.getElementById("reset").addEventListener("click", function () {
+                localStorage.clear();
+                location.reload();
+            });
+            document.getElementById("reset_scores").addEventListener("click", function () {
+                localStorage.removeItem("grades");
+                location.reload();
+            });
+        </script>
+
+
+        <dialog id="config_error">
+            <article>
+                <header>
+                    <button aria-label="Close" rel="prev" id="config_err_close"></button>
+                    <p>
+                        <strong>加载失败</strong>
+                    </p>
+                </header>
+                <p>
+                    无法加载配置文件，请检查配置文件是否正常。
+                </p>
+                <p id="err_msg"></p>
+            </article>
+        </dialog>
+
+        <script>
+            document.getElementById("config_err_close").addEventListener("click", function () {
+                document.getElementById("config_error").close();
+            });
+        </script>
 
     </main>
 
@@ -237,12 +332,61 @@
         const footer = root.querySelector("footer");
         //remove footer
         root.removeChild(footer);
-        const gradeKeys = Object.keys(classes);
-        for (let i = 0; i < gradeKeys.length; i++) {
-            const gradeName = gradeKeys[i];
-            const gradeClasses = classes[gradeName];
-            const gradeAccordion = getGradeAccordion(gradeName, gradeClasses);
-            root.appendChild(gradeAccordion);
+
+        //get classes from localsotrage
+        let classesName = localStorage.getItem("classesName");
+        let classes = JSON.parse(localStorage.getItem("classes"));
+        if (classes == null) {
+            classes = defaultClasses;
+            localStorage.setItem("classes", JSON.stringify(defaultClasses));
+        }
+        if (classesName == null) {
+            classesName = defaultClassesName;
+            localStorage.setItem("classesName", classesName);
+        }
+
+        //set config name
+        document.getElementById("name_show").innerText = classesName;
+
+        //set config text
+        document.getElementById("config_text").value = JSON.stringify(classes, null, 4);
+        document.getElementById("config_name").value = classesName
+
+        //save config
+        document.getElementById("config_save").addEventListener("click", function () {
+            const configText = document.getElementById("config_text").value;
+            const configName = document.getElementById("config_name").value;
+            try {
+                const config = JSON.parse(configText);
+                localStorage.setItem("classes", JSON.stringify(config));
+                localStorage.setItem("classesName", configName);
+                location.reload();
+            } catch (e) {
+                const dialog = document.getElementById("config_error");
+                dialog.showModal();
+                document.getElementById("err_msg").innerText = e;
+            }
+        });
+
+        //reset config
+        document.getElementById("config_reset").addEventListener("click", function () {
+            localStorage.setItem("classes", JSON.stringify(defaultClasses));
+            localStorage.setItem("classesName", defaultClassesName);
+            location.reload();
+        });
+
+        try {
+            const gradeKeys = Object.keys(classes);
+            for (let i = 0; i < gradeKeys.length; i++) {
+                const gradeName = gradeKeys[i];
+                const gradeClasses = classes[gradeName];
+                const gradeAccordion = getGradeAccordion(gradeName, gradeClasses);
+                root.appendChild(gradeAccordion);
+            }
+        } catch (e) {
+            const dialog = document.getElementById("config_error");
+            dialog.showModal();
+            document.getElementById("err_msg").innerText = e;
         }
         //add footer
         root.appendChild(footer);
