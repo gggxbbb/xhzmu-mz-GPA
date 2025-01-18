@@ -4,5 +4,33 @@
     "description": "一个简单的 GPA 计算器",
     "id": "https://gpa.gxb.pub",
     "start_url": "/",
-    "display": "standalone"
+    "display": "standalone",
+    "display_override": [
+        "standalone",
+        "minimal-ui",
+        "browser"
+    ],
+    "icons": [
+        {
+            "sizes": "16x16",
+            "src": "img/favicon-16x16.png",
+            "type": "image/png"
+        },
+        {
+            "sizes": "32x32",
+            "src": "img/favicon-32x32.png",
+            "type": "image/png"
+        },
+        {
+            "sizes": "192x192",
+            "src": "img/android-chrome-192x192.png",
+            "type": "image/png"
+        },
+        {
+            "sizes": "512x512",
+            "src": "img/android-chrome-512x512.png",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#ffffff"
 }
