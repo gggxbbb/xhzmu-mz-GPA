@@ -49,9 +49,12 @@
                 ["神经病学", 1.5]
             ]
         }
+        const defaultTargetGPA = 2.0;
 
-        function calculateGPA() {
-            const inputs = document.querySelectorAll("input[type='number']");
+        let showVeryLongGPA = false;
+
+        function calculateGPA(targetGPA) {
+            const inputs = document.querySelectorAll("input[class='grade-input']");
             let totalGrade = 0;
             let totalCredit = 0;
             for (let i = 0; i < inputs.length; i++) {
@@ -69,11 +72,22 @@
             if (isNaN(gpa)) {
                 gpa = 0.0;
             }
+            console.log(gpa);
             const result = document.getElementById("result");
-            result.innerText = gpa.toFixed(2);
+
+            if (showVeryLongGPA) {
+                result.innerText = gpa.toFixed(5);
+            } else {
+                //if result is close to 2, show longer result
+                if (Math.abs(gpa - targetGPA) < 0.01) {
+                    result.innerText = gpa.toFixed(3);
+                } else {
+                    result.innerText = gpa.toFixed(2);
+                }
+            }
 
             //set color to red if gpa < 2.0
-            if (gpa < 2.0) {
+            if (gpa < targetGPA) {
                 result.style.color = "red";
             } else {
                 result.style.color = "";
@@ -108,12 +122,12 @@
             }
         }
 
-        function setupInputEvents() {
+        function setupInputEvents(targetGPA) {
             const inputs = document.querySelectorAll("input[type='number']");
             for (let i = 0; i < inputs.length; i++) {
                 const input = inputs[i];
                 input.addEventListener("input", function () {
-                    calculateGPA();
+                    calculateGPA(targetGPA);
                     saveAllGradesToLocalStorage();
                 });
             }
@@ -140,6 +154,7 @@
             input.setAttribute("max", "100");
             input.setAttribute("x-value", classValue);
             input.setAttribute("x-name", className);
+            input.setAttribute("class", "grade-input");
             rootFieldset.appendChild(input);
 
             rootForm.appendChild(rootFieldset);
@@ -173,7 +188,6 @@
         }
 
         .grade-label {
-            margin-bottom: 0.5em;
             font-weight: bold;
             /* 上下居中, 靠左对齐 */
             display: flex;
@@ -183,18 +197,48 @@
             padding-left: 0.5em;
         }
 
-        #config_name_form {
+        fieldset.config {
             display: grid;
             grid-template-columns: 1fr 1fr;
+        }
+
+        fieldset.config label {
+            /* 上下居中, 靠左对齐 */
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            /* 左边距 */
+            padding-left: 0.5em;
+        }
+
+        fieldset.config input[type="number"] {
+            width: 100%;
+            padding: 0.5em;
+            /* 文本对齐 */
+            text-align: center;
+        }
+
+        fieldset.config_long legend {
+            /* 上下居中, 靠左对齐 */
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            /* 左边距 */
+            padding-left: 0.5em;
+        }
+
+        fieldset.config_long textarea {
+            width: 100%;
+            padding: 0.5em;
+            /* 文本对齐 */
+            text-align: left;
+            /* 等宽字体 */
+            font-family: monospace;
         }
 
         input[type="number"] {
             width: 100%;
             padding: 0.5em;
-            margin-bottom: 1em;
-            border: 1px solid #ccc;
-            border-radius: 0.25em;
-            box-sizing: border-box;
             /* 文本对齐 */
             text-align: center;
         }
@@ -250,7 +294,32 @@
             <header>说明</header>
             <p>本计算器计算结果仅供参考，不作为最终成绩的评定标准。</p>
             <p>计算公式：绩点 = Σ(学分 * (成绩 - 50) / 10) / Σ学分</p>
+            <p>默认精确至小数点后 2 位。若绩点较接近目标绩点，将精确至小数点后 3 位。可在下方启用“结果显示至小数点后 5 位”</p>
             <p>已填写的成绩或自定义的配置文件将存储在本地，但随时可能被浏览器清理。<strong>请勿将此计算器用于记录或保存成绩。</strong></p>
+
+            <fieldset>
+                <label>
+                    <input name="very_long_gpa" type="checkbox" role="switch" />
+                    结果显示至小数点后 5 位
+                  </label>
+            </fieldset>
+
+            <script>
+                // get data from local storage
+                const ifShowVeryLongGPA = localStorage.getItem("showVeryLongGPA");
+                if (ifShowVeryLongGPA === "true") {
+                    document.querySelector("input[name='very_long_gpa']").checked = true;
+                    showVeryLongGPA = true;
+                } else {
+                    document.querySelector("input[name='very_long_gpa']").checked = false;
+                    showVeryLongGPA = false;
+                }
+                document.querySelector("input[name='very_long_gpa']").addEventListener("change", function () {
+                    showVeryLongGPA = this.checked;
+                    localStorage.setItem("showVeryLongGPA", showVeryLongGPA);
+                    calculateGPA(parseFloat(localStorage.getItem("targetGPA")));
+                });
+            </script>
 
             <details>
                 <summary>自定义配置文件</summary>
@@ -265,13 +334,17 @@
 }
                 </pre>
                 <form class="config">
-                    <fieldset role="group" id="config_name_form">
+                    <fieldset role="group" id="config_name_form" class="config">
                         <label class="config">名称</label>
                         <input type="text" id="config_name" class="config">
                     </fieldset>
-                    <fieldset>
-                        <legend class="config">配置文件</legend>
-                        <textarea id="config_text" rows="10" cols="50" class="config"></textarea>
+                    <fieldset role="group" id="config_target_form" class="config">
+                        <label class="config">目标绩点</label>
+                        <input type="number" id="config_target" class="config" min="0" max="5" step="0.1">
+                    </fieldset>
+                    <fieldset id="config_text" class="config_long">
+                        <legend class="config">科目配置</legend>
+                        <textarea id="config_text_area" rows="10" cols="50" class="config"></textarea>
                     </fieldset>
                     <div role="group" class="config">
                         <input role="button" id="config_reset" type="button" value="重置" class="contrast config">
@@ -336,7 +409,11 @@
 
         //get classes from localsotrage
         let classesName = localStorage.getItem("classesName");
+        console.log(classesName);
         let classes = JSON.parse(localStorage.getItem("classes"));
+        console.log(classes);
+        let targetGPA = parseFloat(localStorage.getItem("targetGPA"));
+        console.log(targetGPA);
         if (classes == null) {
             classes = defaultClasses;
             localStorage.setItem("classes", JSON.stringify(defaultClasses));
@@ -345,22 +422,31 @@
             classesName = defaultClassesName;
             localStorage.setItem("classesName", classesName);
         }
+        if (isNaN(targetGPA)) {
+            targetGPA = defaultTargetGPA;
+            localStorage.setItem("targetGPA", targetGPA);
+        }
 
         //set config name
         document.getElementById("name_show").innerText = classesName;
 
         //set config text
-        document.getElementById("config_text").value = JSON.stringify(classes, null, 4);
+        document.getElementById("config_text_area").value = JSON.stringify(classes, null, 4);
         document.getElementById("config_name").value = classesName
+
+        //set target GPA
+        document.getElementById("config_target").value = targetGPA;
 
         //save config
         document.getElementById("config_save").addEventListener("click", function () {
-            const configText = document.getElementById("config_text").value;
+            const configText = document.getElementById("config_text_area").value;
             const configName = document.getElementById("config_name").value;
+            const configTarget = document.getElementById("config_target").value;
             try {
                 const config = JSON.parse(configText);
                 localStorage.setItem("classes", JSON.stringify(config));
                 localStorage.setItem("classesName", configName);
+                localStorage.setItem("targetGPA", configTarget);
                 location.reload();
             } catch (e) {
                 const dialog = document.getElementById("config_error");
@@ -393,8 +479,8 @@
         root.appendChild(footer);
 
         loadAllGradesFromLocalStorage();
-        setupInputEvents();
-        calculateGPA();
+        setupInputEvents(targetGPA);
+        calculateGPA(targetGPA);
 
     </script>
 
