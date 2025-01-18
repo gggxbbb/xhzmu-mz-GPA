@@ -1,11 +1,8 @@
 {
-    "name": "GPA 计算器",
+    "name": "学位绩点计算器",
+    "short_name": "GPA",
     "description": "一个简单的 GPA 计算器",
-    "version": "1.0",
-    "manifest_version": 3,
-    "display": "standalone",
-    "offline_enabled": true,
-    "permissions": [
-        "storage"
-    ]
+    "id": "https://gpa.gxb.pub",
+    "start_url": "/",
+    "display": "standalone"
 }
