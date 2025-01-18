@@ -1,0 +1,11 @@
+{
+    "name": "GPA 计算器",
+    "description": "一个简单的 GPA 计算器",
+    "version": "1.0",
+    "manifest_version": 3,
+    "display": "standalone",
+    "offline_enabled": true,
+    "permissions": [
+        "storage"
+    ]
+}
