@@ -285,27 +285,22 @@
             left: 0;
             right: 0;
             z-index: 1000;
-            display: flex;
-            justify-content: space-between;
         }
 
         #title_bar nav {
-            display: flex;
             position: relative;
             left: env(titlebar-area-x, 0);
             top: env(titlebar-area-y, 0);
             max-width: env(titlebar-area-width, 100%);
-            height: env(titlebar-area-height, 80px);
+            height: env(titlebar-area-height, 60px);
         }
 
-        #title_bar strong {
-            font-size: 1.5em;
-            padding: 0.5em;
-            padding-left: 1em;
+        #title_bar ul {
+            padding: 1em;
         }
 
         #main_body {
-            margin-top: env(titlebar-area-height, 80px);
+            margin-top: env(titlebar-area-height, 60px);
             padding: 1em;
         }
     </style>
@@ -324,10 +319,71 @@
                     </li>
                 </ul>
                 <ul>
-
+                    <li>
+                        <a id="input_btn" href="#">导入</a>
+                    </li>
+                    <li>
+                        <a id="export_btn" href="#">导出</a>
+                    </li>
                 </ul>
             </nav>
         </header>
+
+        <script>
+
+            /*
+
+            {
+            "className": ...,
+            "classes": ...,
+            "targetGPA": ...,
+            "scores":...
+            }
+
+            */
+
+            document.getElementById("input_btn").addEventListener("click", function () {
+                const input = document.createElement("input");
+                input.setAttribute("type", "file");
+                input.setAttribute("accept", ".json");
+                input.addEventListener("change", function () {
+                    const file = input.files[0];
+                    const reader = new FileReader();
+                    reader.onload = function () {
+                        const data = JSON.parse(reader.result);
+                        localStorage.setItem("classes", JSON.stringify(data.classes));
+                        localStorage.setItem("classesName", data.className);
+                        localStorage.setItem("targetGPA", data.targetGPA);
+                        localStorage.setItem("grades", JSON.stringify(data.scores));
+                        location.reload();
+                    }
+                    reader.readAsText(file);
+                });
+                input.click();
+            });
+
+            document.getElementById("export_btn").addEventListener("click", function () {
+
+                //file name as GPA-YYYY-MM-DD.json
+
+                const data = {
+                    "className": localStorage.getItem("classesName"),
+                    "classes": JSON.parse(localStorage.getItem("classes")),
+                    "targetGPA": parseFloat(localStorage.getItem("targetGPA")),
+                    "scores": JSON.parse(localStorage.getItem("grades"))
+                }
+                const blob = new Blob([JSON.stringify(data)], {
+                    type: "application/json"
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "GPA-" + new Date().toISOString().split("T")[0] + ".json";
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+        </script>
 
         <div id="main_body">
             <article id="show_result">
