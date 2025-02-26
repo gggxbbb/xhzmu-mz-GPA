@@ -94,6 +94,10 @@
 
             //set color to red if gpa < 2.0
             if (gpa < targetGPA) {
+                //skip if totalCredit is 0
+                if (totalCredit <= 0) {
+                    return;
+                }
                 result.style.color = "red";
             } else {
                 result.style.color = "";
@@ -251,6 +255,7 @@
 
         #show_result {
             text-align: center;
+            align-self: self-end;
         }
 
         #result {
@@ -306,6 +311,41 @@
         #main_body {
             margin-top: env(titlebar-area-height, 60px);
             padding: 1em;
+        }
+
+        #config {
+            /* 内容顶部对齐 */
+            align-self: start;
+        }
+
+        /* 在 PC 上成绩单单独显示在右侧，占据一列。其余内容在左侧，占据一列。 */
+        @media screen and (min-width: 768px) {
+            #main_body {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1em;
+            }
+
+            #show_result {
+                grid-column-start: 1;
+                grid-column-end: 2;
+                grid-row-start: 1;
+                grid-row-end: 2;
+            }
+
+            #scores {
+                grid-column-start: 2;
+                grid-column-end: 3;
+                grid-row-start: 1;
+                grid-row-end: 3;
+            }
+
+            #config {
+                grid-column-start: 1;
+                grid-column-end: 2;
+                grid-row-start: 2;
+                grid-row-end: 3;
+            }
         }
     </style>
 
@@ -390,34 +430,39 @@
         </script>
 
         <div id="main_body">
-            <article id="show_result">
-                <header>您的学位绩点为</header>
-                <p id="result">0.00</p>
-            </article>
+            <div id="show_result">
+                <article>
+                    <header>您的学位绩点为</header>
+                    <p id="result">0.00</p>
+                </article>
+            </div>
 
-            <article id="scores">
-                <header>成绩单</header>
-                <footer>点击右侧箭头展开或折叠各学期成绩，暂无成绩的科目留空。已填写的成绩将保存在本地。</footer>
-            </article>
+            <div id="scores">
+                <article>
+                    <header>成绩单</header>
+                    <footer>点击右侧箭头展开或折叠各学期成绩，暂无成绩的科目留空。已填写的成绩将保存在本地。</footer>
+                </article>
+            </div>
 
-            <article>
-                <header>说明</header>
-                <p>本计算器计算结果仅供参考，不作为最终成绩的评定标准。</p>
-                <p>计算公式：绩点 = Σ(学分 * (成绩 - 50) / 10) / Σ学分</p>
-                <p>默认精确至小数点后 2 位。若绩点较接近目标绩点，将精确至小数点后 3 位。可在下方启用“结果显示至小数点后 5 位”</p>
-                <p>已填写的成绩或自定义的配置文件将存储在本地，但随时可能被浏览器清理。<strong>请勿将此计算器用于记录或保存成绩。</strong></p>
+            <div id="config">
+                <article>
+                    <header>说明</header>
+                    <p>本计算器计算结果仅供参考，不作为最终成绩的评定标准。</p>
+                    <p>计算公式：绩点 = Σ(学分 * (成绩 - 50) / 10) / Σ学分</p>
+                    <p>默认精确至小数点后 2 位。若绩点较接近目标绩点，将精确至小数点后 3 位。可在下方启用“结果显示至小数点后 5 位”</p>
+                    <p>已填写的成绩或自定义的配置文件将存储在本地，但随时可能被浏览器清理。<strong>请勿将此计算器用于记录或保存成绩。</strong></p>
 
-                <fieldset>
-                    <label>
-                        <input name="very_long_gpa" type="checkbox" role="switch" />
-                        结果显示至小数点后 5 位
-                    </label>
-                </fieldset>
+                    <fieldset>
+                        <label>
+                            <input name="very_long_gpa" type="checkbox" role="switch" />
+                            结果显示至小数点后 5 位
+                        </label>
+                    </fieldset>
 
-                <details>
-                    <summary>自定义配置文件</summary>
-                    <p class="config">您可以通过修改下面的配置文件来自定义课程和学分。配置文件格式为：</p>
-                    <pre class="config">
+                    <details>
+                        <summary>自定义配置文件</summary>
+                        <p class="config">您可以通过修改下面的配置文件来自定义课程和学分。配置文件格式为：</p>
+                        <pre class="config">
 {
     "年级1": [
         ["课程1", 学分1],
@@ -426,37 +471,38 @@
     ...
 }
                 </pre>
-                    <form class="config">
-                        <fieldset role="group" id="config_name_form" class="config">
-                            <label class="config">名称</label>
-                            <input type="text" id="config_name" class="config">
-                        </fieldset>
-                        <fieldset role="group" id="config_target_form" class="config">
-                            <label class="config">目标绩点</label>
-                            <input type="number" id="config_target" class="config" min="0" max="5" step="0.1">
-                        </fieldset>
-                        <fieldset id="config_text" class="config_long">
-                            <legend class="config">科目配置</legend>
-                            <textarea id="config_text_area" rows="10" cols="50" class="config"></textarea>
-                        </fieldset>
-                        <div role="group" class="config">
-                            <input role="button" id="config_reset" type="button" value="重置" class="contrast config">
-                            <input role="button" id="config_save" type="button" value="保存" class="config">
+                        <form class="config">
+                            <fieldset role="group" id="config_name_form" class="config">
+                                <label class="config">名称</label>
+                                <input type="text" id="config_name" class="config">
+                            </fieldset>
+                            <fieldset role="group" id="config_target_form" class="config">
+                                <label class="config">目标绩点</label>
+                                <input type="number" id="config_target" class="config" min="0" max="5" step="0.1">
+                            </fieldset>
+                            <fieldset id="config_text" class="config_long">
+                                <legend class="config">科目配置</legend>
+                                <textarea id="config_text_area" rows="10" cols="50" class="config"></textarea>
+                            </fieldset>
+                            <div role="group" class="config">
+                                <input role="button" id="config_reset" type="button" value="重置" class="contrast config">
+                                <input role="button" id="config_save" type="button" value="保存" class="config">
+                            </div>
+                        </form>
+                        <p>配置文件将保存在本地。修改配置文件时，同名课程成绩将保留。</p>
+                    </details>
+
+                    <details>
+                        <summary>工具</summary>
+                        <div role="group">
+                            <button role="button" class="contrast" id="reset">清除本地数据</button>
+                            <button role="button" id="reset_scores">仅清除成绩</button>
                         </div>
-                    </form>
-                    <p>配置文件将保存在本地。修改配置文件时，同名课程成绩将保留。</p>
-                </details>
+                    </details>
 
-                <details>
-                    <summary>工具</summary>
-                    <div role="group">
-                        <button role="button" class="contrast" id="reset">清除本地数据</button>
-                        <button role="button" id="reset_scores">仅清除成绩</button>
-                    </div>
-                </details>
-
-                <footer><a href="https://github.com/gggxbbb/xhzmu-mz-GPA" target="_blank">GitHub</a></footer>
-            </article>
+                    <footer><a href="https://github.com/gggxbbb/xhzmu-mz-GPA" target="_blank">GitHub</a></footer>
+                </article>
+            </div>
 
         </div>
 
@@ -514,7 +560,7 @@
 
     <script>
 
-        const root = document.getElementById("scores");
+        const root = document.getElementById("scores").children[0];
         const footer = root.querySelector("footer");
         //remove footer
         root.removeChild(footer);
@@ -593,6 +639,15 @@
         loadAllGradesFromLocalStorage();
         setupInputEvents(targetGPA);
         calculateGPA(targetGPA);
+
+        //get the height of #show_result
+        const showResultHeight = document.getElementById("show_result").offsetHeight;
+        document.getElementById("main_body").style.gridTemplateRows = showResultHeight + "px auto";
+
+        window.addEventListener("resize", function () {
+            const showResultHeight = document.getElementById("show_result").offsetHeight;
+            document.getElementById("main_body").style.gridTemplateRows = showResultHeight + "px auto";
+        });
 
     </script>
 
