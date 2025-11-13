@@ -55,9 +55,53 @@
                 ["神经病学", 1.5]
             ]
         }
+        const defaultClassesStr = dumpClasses(defaultClasses);
+
         const defaultTargetGPA = 2.0;
 
         let showVeryLongGPA = false;
+
+        function loadClasses(classesStr) {
+            if (classesStr == null) {
+                return null;
+            }
+            const lines = classesStr.split("\n");
+            let classes = {};
+            let currentGrade = "";
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line === "") {
+                    continue;
+                }
+                //if line does not contain space, it is a grade
+                if (!line.includes(" ")) {
+                    currentGrade = line;
+                    classes[currentGrade] = [];
+                } else {
+                    const parts = line.split(" ");
+                    const className = parts.slice(0, parts.length - 1).join(" ");
+                    const classValue = parseFloat(parts[parts.length - 1]);
+                    classes[currentGrade].push([className, classValue]);
+                }
+            }
+            return classes;
+        }
+
+        function dumpClasses(classes) {
+            let classesStr = "";
+            const gradeKeys = Object.keys(classes);
+            for (let i = 0; i < gradeKeys.length; i++) {
+                const gradeName = gradeKeys[i];
+                classesStr += gradeName + "\n";
+                const gradeClasses = classes[gradeName];
+                for (let j = 0; j < gradeClasses.length; j++) {
+                    const className = gradeClasses[j][0];
+                    const classValue = gradeClasses[j][1];
+                    classesStr += className + " " + classValue + "\n";
+                }
+            }
+            return classesStr.trim();
+        }
 
         function calculateGPA(targetGPA) {
             const inputs = document.querySelectorAll("input[class='grade-input']");
@@ -395,7 +439,7 @@
                     const reader = new FileReader();
                     reader.onload = function () {
                         const data = JSON.parse(reader.result);
-                        localStorage.setItem("classes", JSON.stringify(data.classes));
+                        localStorage.setItem("classes", data.classes);
                         localStorage.setItem("classesName", data.className);
                         localStorage.setItem("targetGPA", data.targetGPA);
                         localStorage.setItem("grades", JSON.stringify(data.scores));
@@ -412,7 +456,7 @@
 
                 const data = {
                     "className": localStorage.getItem("classesName"),
-                    "classes": JSON.parse(localStorage.getItem("classes")),
+                    "classes": localStorage.getItem("classes"),
                     "targetGPA": parseFloat(localStorage.getItem("targetGPA")),
                     "scores": JSON.parse(localStorage.getItem("grades"))
                 }
@@ -463,13 +507,15 @@
                         <summary>自定义配置文件</summary>
                         <p class="config">您可以通过修改下面的配置文件来自定义课程和学分。配置文件格式为：</p>
                         <pre class="config">
-{
-    "年级1": [
-        ["课程1", 学分1],
-        ["课程2", 学分2]
-    ],
-    ...
-}
+年级1
+课程1 6.5 <-学分
+课程2 7 <- 学分
+    ⬆️此处为空格
+⬇️一个完整的例子
+大二上
+病理学 5
+医学微生物学与免疫学 6
+麻醉生理学 6
                 </pre>
                         <form class="config">
                             <fieldset role="group" id="config_name_form" class="config">
@@ -568,13 +614,13 @@
         //get classes from localsotrage
         let classesName = localStorage.getItem("classesName");
         console.log(classesName);
-        let classes = JSON.parse(localStorage.getItem("classes"));
+        let classes = loadClasses(localStorage.getItem("classes"));
         console.log(classes);
         let targetGPA = parseFloat(localStorage.getItem("targetGPA"));
         console.log(targetGPA);
         if (classes == null) {
-            classes = defaultClasses;
-            localStorage.setItem("classes", JSON.stringify(defaultClasses));
+            classes = loadClasses(defaultClassesStr);
+            localStorage.setItem("classes", defaultClassesStr);
         }
         if (classesName == null) {
             classesName = defaultClassesName;
@@ -589,7 +635,7 @@
         document.getElementById("name_show").innerText = classesName;
 
         //set config text
-        document.getElementById("config_text_area").value = JSON.stringify(classes, null, 4);
+        document.getElementById("config_text_area").value = dumpClasses(classes);
         document.getElementById("config_name").value = classesName
 
         //set target GPA
@@ -601,8 +647,7 @@
             const configName = document.getElementById("config_name").value;
             const configTarget = document.getElementById("config_target").value;
             try {
-                const config = JSON.parse(configText);
-                localStorage.setItem("classes", JSON.stringify(config));
+                localStorage.setItem("classes", configText);
                 localStorage.setItem("classesName", configName);
                 localStorage.setItem("targetGPA", configTarget);
                 location.reload();
@@ -615,7 +660,7 @@
 
         //reset config
         document.getElementById("config_reset").addEventListener("click", function () {
-            localStorage.setItem("classes", JSON.stringify(defaultClasses));
+            localStorage.setItem("classes", defaultClassesStr);
             localStorage.setItem("classesName", defaultClassesName);
             location.reload();
         });
