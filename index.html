@@ -13,6 +13,9 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="img/favicon-512x512.png" sizes="512x512" type="image/png">
 
+    <script defer src="https://analysis.gxb.icu/script.js"
+        data-website-id="502fa9db-262e-44fe-968b-c8b647e82edd"></script>
+
     <script>
 
         const defaultClassesName = "徐医本麻"
@@ -145,6 +148,13 @@
                 result.style.color = "red";
             } else {
                 result.style.color = "";
+            }
+
+            try {
+                window.umami.track("计算 GPA", { gpa: gpa.toFixed(2) });
+            }
+            catch (e) {
+                console.log("Umami not found");
             }
         }
 
@@ -446,8 +456,22 @@
                         location.reload();
                     }
                     reader.readAsText(file);
+                    try {
+                        window.umami.track("导入配置文件", { file_name: file.name, className: data.className });
+                    }
+                    catch (e) {
+                        console.log("Umami not found");
+                    }
                 });
                 input.click();
+
+                try {
+                    window.umami.track("点击: 导入配置文件");
+                }
+                catch (e) {
+                    console.log("Umami not found");
+                }
+
             });
 
             document.getElementById("export_btn").addEventListener("click", function () {
@@ -469,6 +493,13 @@
                 a.download = "GPA-" + new Date().toISOString().split("T")[0] + ".json";
                 a.click();
                 URL.revokeObjectURL(url);
+
+                try {
+                    window.umami.track("导出配置文件", { file_name: a.download, className: data.className });
+                }
+                catch (e) {
+                    console.log("Umami not found");
+                }
             });
 
         </script>
@@ -495,6 +526,7 @@
                     <p>计算公式：绩点 = Σ(学分 * (成绩 - 50) / 10) / Σ学分</p>
                     <p>默认精确至小数点后 2 位。若绩点较接近目标绩点，将精确至小数点后 3 位。可在下方启用“结果显示至小数点后 5 位”</p>
                     <p>已填写的成绩或自定义的配置文件将存储在本地，但随时可能被浏览器清理。<strong>请勿将此计算器用于记录或保存成绩。</strong></p>
+                    <p>本页面可能会收集您的使用数据(包括但不限于浏览器信息、操作系统、IP 地址等)以改善用户体验。</p>
 
                     <fieldset>
                         <label>
@@ -562,20 +594,44 @@
                 document.querySelector("input[name='very_long_gpa']").checked = false;
                 showVeryLongGPA = false;
             }
+            try {
+                window.umami.track("页面加载: 结果显示至小数点后 5 位", { show: showVeryLongGPA });
+            }
+            catch (e) {
+                console.log("Umami not found");
+            }
             document.querySelector("input[name='very_long_gpa']").addEventListener("change", function () {
                 showVeryLongGPA = this.checked;
                 localStorage.setItem("showVeryLongGPA", showVeryLongGPA);
                 calculateGPA(parseFloat(localStorage.getItem("targetGPA")));
+                try {
+                    window.umami.track("切换: 结果显示至小数点后 5 位", { show: showVeryLongGPA });
+                }
+                catch (e) {
+                    console.log("Umami not found");
+                }
             });
         </script>
 
         <script>
             document.getElementById("reset").addEventListener("click", function () {
                 localStorage.clear();
+                try {
+                    window.umami.track("点击: 清除本地数据");
+                }
+                catch (e) {
+                    console.log("Umami not found");
+                }
                 location.reload();
             });
             document.getElementById("reset_scores").addEventListener("click", function () {
                 localStorage.removeItem("grades");
+                try {
+                    window.umami.track("点击: 仅清除成绩");
+                }
+                catch (e) {
+                    console.log("Umami not found");
+                }
                 location.reload();
             });
         </script>
@@ -599,6 +655,12 @@
         <script>
             document.getElementById("config_err_close").addEventListener("click", function () {
                 document.getElementById("config_error").close();
+                try {
+                    window.umami.track("点击: 关闭配置文件错误对话框");
+                }
+                catch (e) {
+                    console.log("Umami not found");
+                }
             });
         </script>
 
@@ -618,6 +680,12 @@
         console.log(classes);
         let targetGPA = parseFloat(localStorage.getItem("targetGPA"));
         console.log(targetGPA);
+        try {
+            window.umami.track("页面加载: 加载本地配置文件", { className: classesName });
+        }
+        catch (e) {
+            console.log("Umami not found");
+        }
         if (classes == null) {
             classes = loadClasses(defaultClassesStr);
             localStorage.setItem("classes", defaultClassesStr);
@@ -656,12 +724,24 @@
                 dialog.showModal();
                 document.getElementById("err_msg").innerText = e;
             }
+            try {
+                window.umami.track("点击: 保存配置文件", { className: configName });
+            }
+            catch (e) {
+                console.log("Umami not found");
+            }
         });
 
         //reset config
         document.getElementById("config_reset").addEventListener("click", function () {
             localStorage.setItem("classes", defaultClassesStr);
             localStorage.setItem("classesName", defaultClassesName);
+            try {
+                window.umami.track("点击: 重置配置文件为默认值", { className: defaultClassesName });
+            }
+            catch (e) {
+                console.log("Umami not found");
+            }
             location.reload();
         });
 
