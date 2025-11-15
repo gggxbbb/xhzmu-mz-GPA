@@ -13,8 +13,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="img/favicon-512x512.png" sizes="512x512" type="image/png">
 
-    <script defer src="https://analysis.gxb.icu/script.js"
-        data-website-id="502fa9db-262e-44fe-968b-c8b647e82edd"></script>
+    <script src="https://analysis.gxb.icu/script.js" data-website-id="502fa9db-262e-44fe-968b-c8b647e82edd"></script>
 
     <script>
 
@@ -110,12 +109,19 @@
             const inputs = document.querySelectorAll("input[class='grade-input']");
             let totalGrade = 0;
             let totalCredit = 0;
+
+            let all_grade_legal = true;
+
             for (let i = 0; i < inputs.length; i++) {
                 const input = inputs[i];
                 const credit = parseFloat(input.getAttribute("x-value"));
                 const grade = parseFloat(input.value);
                 if (isNaN(grade) || grade < 0 || grade > 100) {
                     continue;
+                }
+                if (grade < 10) {
+                    all_grade_legal = false;
+                    document.getElementById("illegal_warning").style.display = "block";
                 }
                 const gradeCreditValue = (grade - 50) / 10;
                 totalGrade += gradeCreditValue * credit;
@@ -151,10 +157,19 @@
             }
 
             try {
-                window.umami.track("计算 GPA", { gpa: gpa.toFixed(2) });
+                // 判断是否有 <10 的分数
+                if (all_grade_legal) {
+                    window.umami.track("计算 GPA", { gpa: gpa.toFixed(2) });
+                } else {
+                    console.log("GPA not tracked due to illegal grades");
+                }
             }
             catch (e) {
                 console.log("Umami not found");
+            }
+
+            if (all_grade_legal) {
+                document.getElementById("illegal_warning").style.display = "none";
             }
         }
 
@@ -509,6 +524,7 @@
                 <article>
                     <header>您的学位绩点为</header>
                     <p id="result">0.00</p>
+                    <p id="illegal_warning" style="color: red; display: none;">注意：输入的成绩中包含小于 10 分的分数，计算结果可能不准确。</p>
                 </article>
             </div>
 
@@ -681,7 +697,7 @@
         let targetGPA = parseFloat(localStorage.getItem("targetGPA"));
         console.log(targetGPA);
         try {
-            window.umami.track("页面加载: 加载本地配置文件", { className: classesName });
+            window.umami.track("页面加载: 加载本地配置文件", { className: classesName, targetGPA: targetGPA });
         }
         catch (e) {
             console.log("Umami not found");
