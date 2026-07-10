@@ -1,11 +1,19 @@
 <template>
-  <div>
-    <h1>学位绩点计算器</h1>
+  <div :data-theme="appStore.isDark ? 'dark' : 'light'">
+    <main class="main-content">
+      <RouterView />
+    </main>
+    <AppNav />
   </div>
 </template>
 
 <script setup>
+import { useAppStore } from './stores/app'
+import AppNav from './components/AppNav.vue'
+
+const appStore = useAppStore()
 </script>
 
 <style>
+@import './assets/styles.css';
 </style>
