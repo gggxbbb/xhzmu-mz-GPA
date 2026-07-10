@@ -23,7 +23,10 @@ function clearGrades() {
 
 function clearAll() {
   if (confirm('确定清除所有本地数据吗？包括成绩、配置档案和设置。')) {
-    localStorage.clear()
+    const keys = ['gpa_v2', 'classes', 'classesName', 'targetGPA', 'grades', 'showVeryLongGPA']
+    for (const key of keys) {
+      localStorage.removeItem(key)
+    }
     location.reload()
   }
 }

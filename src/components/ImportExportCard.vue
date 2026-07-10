@@ -50,11 +50,36 @@ function onFileSelected(event) {
     try {
       const data = JSON.parse(reader.result)
       if (data.version === 2) {
-        profilesStore.updateProfile(data.profile.id, data.profile)
-        gradesStore.load({ ...gradesStore.gradesByProfile, [data.profile.id]: data.grades })
-        appStore.setCurrentProfileId(data.profile.id)
+        const profile = data.profile
+        if (!profile || typeof profile.id !== 'string' || !profile.id ||
+            typeof profile.name !== 'string' ||
+            typeof profile.targetGPA !== 'number' ||
+            !profile.classes || typeof profile.classes !== 'object' || Array.isArray(profile.classes)) {
+          alert('导入失败：档案格式不正确')
+          return
+        }
+        if (data.grades != null && (typeof data.grades !== 'object' || Array.isArray(data.grades))) {
+          alert('导入失败：成绩格式不正确')
+          return
+        }
+
+        const existing = profilesStore.profiles.some(p => p.id === profile.id)
+        if (existing) {
+          profilesStore.updateProfile(profile.id, profile)
+          gradesStore.load({ ...gradesStore.gradesByProfile, [profile.id]: data.grades || {} })
+          appStore.setCurrentProfileId(profile.id)
+        } else {
+          const newId = profilesStore.addProfile(profile.name, profile.targetGPA, profile.classes)
+          gradesStore.load({ ...gradesStore.gradesByProfile, [newId]: data.grades || {} })
+          appStore.setCurrentProfileId(newId)
+          alert('原档案 ID 不存在，已导入为新档案')
+        }
       } else {
         // Legacy format fallback
+        if (!data.classes || typeof data.scores !== 'object' || Array.isArray(data.scores)) {
+          alert('导入失败：旧版格式数据不完整')
+          return
+        }
         const id = profilesStore.addProfile(data.className || '导入配置', data.targetGPA, parseClasses(data.classes))
         gradesStore.load({ ...gradesStore.gradesByProfile, [id]: data.scores })
         appStore.setCurrentProfileId(id)

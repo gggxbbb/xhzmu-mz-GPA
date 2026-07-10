@@ -6,17 +6,17 @@
 
     <div v-for="(courses, semester) in draft.classes" :key="semester" style="border: 1px solid var(--border); border-radius: 0.5rem; overflow: hidden; margin-bottom: 0.8rem;">
       <div style="padding: 0.6rem; background: var(--surface); display: flex; justify-content: space-between; align-items: center;">
-        <input class="input" v-model="semesterNames[semester]" style="width: 100px; font-weight: bold; background: transparent; border: none; padding: 0;" @change="renameSemester(semester, semesterNames[semester])">
+        <input class="input" :aria-label="`学期名称 ${semester}`" v-model="semesterNames[semester]" style="width: 100px; font-weight: bold; background: transparent; border: none; padding: 0;" @change="renameSemester(semester, semesterNames[semester])">
         <div style="display: flex; gap: 0.3rem;">
           <button class="btn" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" @click="addCourse(semester)">+ 课</button>
-          <button class="btn btn-danger" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" @click="removeSemester(semester)">删除学期</button>
+          <button class="btn btn-danger" aria-label="删除学期" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" @click="removeSemester(semester)">删除学期</button>
         </div>
       </div>
       <div style="padding: 0.6rem;">
         <div v-for="(course, index) in courses" :key="index" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
           <input class="input" v-model="course.name" placeholder="课程名称" style="flex: 2;">
           <input class="input" v-model.number="course.credit" placeholder="学分" style="flex: 1;">
-          <button class="btn btn-danger" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" @click="removeCourse(semester, index)">✕</button>
+          <button class="btn btn-danger" aria-label="删除课程" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" @click="removeCourse(semester, index)">✕</button>
         </div>
       </div>
     </div>
@@ -104,6 +104,12 @@ function reset() {
 }
 
 function save() {
+  const targetGPA = parseFloat(draft.targetGPA)
+  if (isNaN(targetGPA) || targetGPA < 0 || targetGPA > 5) {
+    alert('目标绩点必须是 0 到 5 之间的数字')
+    return
+  }
+
   let classes = draft.classes
   if (textMode.value.trim()) {
     const parsed = parseClasses(textMode.value)
@@ -111,10 +117,27 @@ function save() {
       classes = parsed
     }
   }
+
+  const filteredClasses = {}
+  for (const semester of Object.keys(classes)) {
+    const validCourses = classes[semester].filter(
+      c => String(c.name || '').trim() !== '' && parseFloat(c.credit) > 0
+    )
+    if (validCourses.length > 0) {
+      filteredClasses[semester] = validCourses
+    }
+  }
+
+  if (Object.keys(filteredClasses).length === 0) {
+    alert('至少需要保留一门有效的课程（名称和学分均不能为空）')
+    return
+  }
+
   profilesStore.updateProfile(currentProfile.value.id, {
     name: draft.name,
-    targetGPA: draft.targetGPA,
-    classes
+    targetGPA,
+    classes: JSON.parse(JSON.stringify(filteredClasses))
   })
+  syncDraft()
 }
 </script>
