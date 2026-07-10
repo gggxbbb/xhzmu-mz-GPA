@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { calculateGPA } from '../composables/useGPA'
 
 const props = defineProps({
@@ -30,6 +30,10 @@ const props = defineProps({
 })
 
 const assumedScore = ref(props.currentGrade ?? 60)
+
+watch(() => props.currentGrade, (newGrade) => {
+  assumedScore.value = newGrade ?? 60
+})
 
 const simulatedGrades = computed(() => ({
   ...props.grades,

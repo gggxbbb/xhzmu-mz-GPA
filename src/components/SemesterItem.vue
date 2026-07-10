@@ -1,14 +1,15 @@
 <template>
   <div class="card" style="padding: 0; overflow: hidden;">
-    <div
-      style="padding: 0.8rem; background: var(--surface); display: flex; justify-content: space-between; align-items: center; cursor: pointer;"
+    <button
+      class="semester-header"
+      :aria-expanded="expanded"
       @click="uiStore.toggleSemester(semester)"
     >
       <span style="font-weight: bold;">{{ semester }}</span>
       <span style="font-size: 0.85rem; color: var(--muted);">
         {{ expanded ? '▼' : '▶' }} GPA {{ semesterGPA.toFixed(2) }}
       </span>
-    </div>
+    </button>
     <div v-if="expanded" style="padding: 0 0.8rem;">
       <CourseRow
         v-for="course in courses"

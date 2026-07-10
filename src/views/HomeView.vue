@@ -13,13 +13,13 @@
       :key="semester"
       :semester="semester"
       :courses="courses"
-      :grades="gradesStore.getGrades(appStore.currentProfileId.value)"
+      :grades="currentGrades"
       :all-courses="gpa.allCourses.value"
       :semester-gpa="gpa.semesterGPAs.value[semester] || 0"
       @update-grade="onUpdateGrade"
       @toggle-what-if="uiStore.setActiveWhatIfCourse"
     />
-    <div v-if="Object.keys(filteredClasses).length === 0" style="text-align: center; color: var(--muted); padding: 2rem;">
+    <div v-if="!hasFilteredClasses" style="text-align: center; color: var(--muted); padding: 2rem;">
       未找到匹配课程
     </div>
   </div>
@@ -62,6 +62,8 @@ const filteredClasses = computed(() => {
   }
   return result
 })
+
+const hasFilteredClasses = computed(() => Object.keys(filteredClasses.value).length > 0)
 
 function onUpdateGrade(courseName, value) {
   gradesStore.setGrade(appStore.currentProfileId.value, courseName, value)

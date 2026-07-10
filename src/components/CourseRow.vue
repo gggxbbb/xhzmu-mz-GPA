@@ -15,7 +15,12 @@
         :value="grade ?? ''"
         @input="onInput"
       />
-      <button class="btn" style="padding: 0.3rem 0.5rem; font-size: 0.75rem;" @click="toggleWhatIf">
+      <button
+        class="btn"
+        style="padding: 0.3rem 0.5rem; font-size: 0.75rem;"
+        aria-label="查看此科成绩影响"
+        @click="toggleWhatIf"
+      >
         📈
       </button>
     </div>
@@ -43,7 +48,15 @@ const props = defineProps({
 const emit = defineEmits(['update:grade', 'toggleWhatIf'])
 
 function onInput(event) {
-  emit('update:grade', props.course.name, event.target.value)
+  const value = event.target.value
+  if (value === '') {
+    emit('update:grade', props.course.name, '')
+    return
+  }
+  const number = Number(value)
+  if (!Number.isNaN(number) && number >= 0 && number <= 100) {
+    emit('update:grade', props.course.name, number)
+  }
 }
 
 function toggleWhatIf() {
