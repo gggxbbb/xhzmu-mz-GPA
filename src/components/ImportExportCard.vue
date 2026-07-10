@@ -51,12 +51,12 @@ function onFileSelected(event) {
       const data = JSON.parse(reader.result)
       if (data.version === 2) {
         profilesStore.updateProfile(data.profile.id, data.profile)
-        gradesStore.load({ ...gradesStore.gradesByProfile, [data.profile.id]: data.grades })
+        gradesStore.load({ ...gradesStore.gradesByProfile.value, [data.profile.id]: data.grades })
         appStore.setCurrentProfileId(data.profile.id)
       } else {
         // Legacy format fallback
         const id = profilesStore.addProfile(data.className || '导入配置', data.targetGPA, parseClasses(data.classes))
-        gradesStore.load({ ...gradesStore.gradesByProfile, [id]: data.scores })
+        gradesStore.load({ ...gradesStore.gradesByProfile.value, [id]: data.scores })
         appStore.setCurrentProfileId(id)
       }
     } catch (e) {
