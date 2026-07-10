@@ -1,8 +1,8 @@
 <template>
   <div class="card">
     <div style="font-weight: bold; margin-bottom: 0.8rem;">编辑当前配置</div>
-    <input class="input" v-model="draft.name" placeholder="档案名称" style="margin-bottom: 0.6rem;">
-    <input class="input" v-model.number="draft.targetGPA" placeholder="目标绩点" style="margin-bottom: 0.6rem;">
+    <input class="input" aria-label="档案名称" v-model="draft.name" placeholder="档案名称" style="margin-bottom: 0.6rem;">
+    <input class="input" aria-label="目标绩点" v-model.number="draft.targetGPA" placeholder="目标绩点" style="margin-bottom: 0.6rem;">
 
     <div v-for="(courses, semester) in draft.classes" :key="semester" style="border: 1px solid var(--border); border-radius: 0.5rem; overflow: hidden; margin-bottom: 0.8rem;">
       <div style="padding: 0.6rem; background: var(--surface); display: flex; justify-content: space-between; align-items: center;">
@@ -14,8 +14,8 @@
       </div>
       <div style="padding: 0.6rem;">
         <div v-for="(course, index) in courses" :key="index" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-          <input class="input" v-model="course.name" placeholder="课程名称" style="flex: 2;">
-          <input class="input" v-model.number="course.credit" placeholder="学分" style="flex: 1;">
+          <input class="input" :aria-label="`课程名称 ${index + 1}`" v-model="course.name" placeholder="课程名称" style="flex: 2;">
+          <input class="input" :aria-label="`课程学分 ${index + 1}`" v-model.number="course.credit" placeholder="学分" style="flex: 1;">
           <button class="btn btn-danger" aria-label="删除课程" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" @click="removeCourse(semester, index)">✕</button>
         </div>
       </div>
@@ -25,7 +25,7 @@
 
     <details style="font-size: 0.85rem;">
       <summary>高级：文本模式编辑</summary>
-      <textarea class="input" v-model="textMode" rows="6" style="font-family: monospace; margin-top: 0.5rem;"></textarea>
+      <textarea class="input" aria-label="文本模式编辑" v-model="textMode" rows="6" style="font-family: monospace; margin-top: 0.5rem;"></textarea>
     </details>
 
     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">

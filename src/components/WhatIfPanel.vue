@@ -6,6 +6,7 @@
     </div>
     <input
       type="range"
+      aria-label="假设分数"
       min="0"
       max="100"
       step="1"
