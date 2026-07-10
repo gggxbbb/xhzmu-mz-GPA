@@ -37,15 +37,19 @@ export const useProfilesStore = defineStore('profiles', () => {
     const p = profiles.value.find(x => x.id === id)
     if (!p) return
     if (patch.name != null) p.name = patch.name
-    if (patch.targetGPA != null) p.targetGPA = parseFloat(patch.targetGPA)
+    if (patch.targetGPA != null) {
+      const parsed = parseFloat(patch.targetGPA)
+      if (!isNaN(parsed)) p.targetGPA = parsed
+    }
     if (patch.classes != null) p.classes = patch.classes
   }
 
   function removeProfile(id) {
     profiles.value = profiles.value.filter(p => p.id !== id)
+    return id
   }
 
-  function setDefault() {
+  function resetToDefault() {
     profiles.value = [createDefaultProfile()]
   }
 
@@ -53,7 +57,7 @@ export const useProfilesStore = defineStore('profiles', () => {
     if (Array.isArray(data) && data.length > 0) {
       profiles.value = data
     } else {
-      setDefault()
+      resetToDefault()
     }
   }
 
@@ -67,7 +71,7 @@ export const useProfilesStore = defineStore('profiles', () => {
     addProfile,
     updateProfile,
     removeProfile,
-    setDefault,
+    resetToDefault,
     load,
     dump
   }

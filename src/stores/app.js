@@ -25,6 +25,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function load(state) {
+    if (!state) return
     if (state.showVeryLongGPA != null) showVeryLongGPA.value = state.showVeryLongGPA
     if (state.theme) theme.value = state.theme
     if (state.currentProfileId) currentProfileId.value = state.currentProfileId

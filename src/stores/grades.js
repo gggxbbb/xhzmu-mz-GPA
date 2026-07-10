@@ -31,7 +31,7 @@ export const useGradesStore = defineStore('grades', () => {
   }
 
   function load(data) {
-    gradesByProfile.value = data || {}
+    gradesByProfile.value = (data && typeof data === 'object' && !Array.isArray(data)) ? data : {}
   }
 
   function dump() {
