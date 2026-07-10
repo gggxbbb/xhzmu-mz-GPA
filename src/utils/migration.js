@@ -6,6 +6,12 @@ export function hasLegacyData() {
   return LEGACY_KEYS.some(key => localStorage.getItem(key) !== null)
 }
 
+/**
+ * Migrate legacy localStorage data to the v2 app state format.
+ *
+ * Callers should check {@link hasLegacyData} first. If no legacy data exists,
+ * this function still returns a default v2 object based on the default values.
+ */
 export function migrateLegacyData() {
   const classesStr = localStorage.getItem('classes')
   const classesName = localStorage.getItem('classesName')
@@ -13,12 +19,13 @@ export function migrateLegacyData() {
   const gradesStr = localStorage.getItem('grades')
   const showVeryLongGPA = localStorage.getItem('showVeryLongGPA')
 
+  const parsedClasses = parseClasses(classesStr)
   const profileId = 'migrated_default'
   const profile = {
     id: profileId,
     name: classesName || DEFAULT_PROFILE_NAME,
     targetGPA: isNaN(targetGPA) ? DEFAULT_TARGET_GPA : targetGPA,
-    classes: parseClasses(classesStr) || DEFAULT_CLASSES
+    classes: Object.keys(parsedClasses).length > 0 ? parsedClasses : DEFAULT_CLASSES
   }
 
   const grades = {}

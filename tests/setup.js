@@ -8,7 +8,10 @@ Object.defineProperty(globalThis, 'localStorage', {
     },
     setItem: (key, value) => store.set(key, String(value)),
     removeItem: (key) => store.delete(key),
-    clear: () => store.clear()
+    clear: () => store.clear(),
+    get length() {
+      return store.size
+    }
   },
   writable: true,
   configurable: true
