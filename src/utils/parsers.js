@@ -13,7 +13,7 @@ export function parseClasses(text) {
       const parts = line.split(' ')
       const credit = parseFloat(parts[parts.length - 1])
       const name = parts.slice(0, parts.length - 1).join(' ')
-      if (!isNaN(credit) && name) {
+      if (!isNaN(credit) && name && currentSemester) {
         classes[currentSemester].push({ name, credit })
       }
     }

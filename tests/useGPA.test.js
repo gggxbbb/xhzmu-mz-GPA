@@ -39,4 +39,34 @@ describe('useGPA', () => {
     expect(gpa.enteredCredits.value).toBe(11)
     expect(gpa.illegalGrades.value).toEqual([])
   })
+
+  it('flags illegal grades (< 10) in illegalGrades', () => {
+    const grades = ref({ '病理学': 5 })
+    const gpa = useGPA(profile, grades)
+    expect(gpa.illegalGrades.value).toContain('病理学')
+  })
+
+  it('returns null from requiredAverageForTarget when all courses are entered', () => {
+    const profile = ref({ name: 'Test', targetGPA: 2.0, classes: DEFAULT_CLASSES })
+    const grades = ref({})
+    const gpa = useGPA(profile, grades)
+    for (const c of gpa.allCourses.value) {
+      grades.value[c.name] = 80
+    }
+    expect(gpa.requiredAverageForTarget.value).toBeNull()
+  })
+
+  it('returns a positive predicted GPA for a valid average score with remaining courses', () => {
+    const profile = ref({ name: 'Test', targetGPA: 2.0, classes: DEFAULT_CLASSES })
+    const grades = ref({ '病理学': 85 })
+    const gpa = useGPA(profile, grades)
+    expect(gpa.predictedGPA(85)).toBeGreaterThan(0)
+  })
+
+  it('returns current GPA for invalid predictedGPA input', () => {
+    const profile = ref({ name: 'Test', targetGPA: 2.0, classes: DEFAULT_CLASSES })
+    const grades = ref({ '病理学': 85 })
+    const gpa = useGPA(profile, grades)
+    expect(gpa.predictedGPA('invalid')).toBe(gpa.currentGPA.value)
+  })
 })

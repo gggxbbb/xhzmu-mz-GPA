@@ -1,17 +1,17 @@
 import { computed } from 'vue'
 
 export function calculateGPA(courses, grades) {
-  let totalGrade = 0
+  let weightedGradePoints = 0
   let totalCredit = 0
   for (const course of courses) {
     const score = grades[course.name]
     if (score == null || isNaN(score)) continue
     const gradePoint = (score - 50) / 10
-    totalGrade += gradePoint * course.credit
+    weightedGradePoints += gradePoint * course.credit
     totalCredit += course.credit
   }
   if (totalCredit <= 0) return 0
-  return totalGrade / totalCredit
+  return weightedGradePoints / totalCredit
 }
 
 export function useGPA(profile, grades) {
@@ -47,6 +47,8 @@ export function useGPA(profile, grades) {
     return result
   })
 
+  // Illegal grades (< 10) are still included in GPA calculation to match the
+  // original app's behavior; they are flagged only for user awareness.
   const illegalGrades = computed(() =>
     enteredCourses.value.filter(c => grades.value[c.name] < 10).map(c => c.name)
   )
@@ -62,10 +64,15 @@ export function useGPA(profile, grades) {
     const currentTotalPoint = currentGPA.value * enteredCredits.value
     const needed = target * totalCredits.value - currentTotalPoint
     if (remainingCredits.value <= 0) return null
-    return (needed / remainingCredits.value) * 10 + 50
+    const average = (needed / remainingCredits.value) * 10 + 50
+    if (average > 100) return null
+    return Math.max(0, average)
   })
 
   function predictedGPA(averageScore) {
+    if (typeof averageScore !== 'number' || averageScore < 0 || averageScore > 100) {
+      return currentGPA.value
+    }
     const remaining = allCourses.value.filter(c => grades.value[c.name] == null || isNaN(grades.value[c.name]))
     const extraPoint = remaining.reduce((sum, c) => sum + ((averageScore - 50) / 10) * c.credit, 0)
     const extraCredit = remaining.reduce((sum, c) => sum + c.credit, 0)

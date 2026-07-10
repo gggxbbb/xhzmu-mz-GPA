@@ -17,6 +17,16 @@ describe('parseClasses', () => {
     expect(parseClasses('')).toEqual({})
     expect(parseClasses(null)).toEqual({})
   })
+
+  it('skips course lines before a semester header', () => {
+    const input = `病理学 5\n大二上\n医学微生物学与免疫学 6`
+    const result = parseClasses(input)
+    expect(result).toEqual({
+      "大二上": [
+        { name: "医学微生物学与免疫学", credit: 6 }
+      ]
+    })
+  })
 })
 
 describe('serializeClasses', () => {
@@ -24,5 +34,12 @@ describe('serializeClasses', () => {
     const text = serializeClasses(DEFAULT_CLASSES)
     expect(text).toContain('大二上')
     expect(text).toContain('病理学 5')
+  })
+})
+
+describe('parse/serialize round-trip', () => {
+  it('parses serialized text back to the same classes', () => {
+    const text = serializeClasses(DEFAULT_CLASSES)
+    expect(parseClasses(text)).toEqual(DEFAULT_CLASSES)
   })
 })
