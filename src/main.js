@@ -34,7 +34,7 @@ function initializeState() {
     profilesStore.resetToDefault()
   }
 
-  const currentId = appStore.currentProfileId.value
+  const currentId = appStore.currentProfileId
   const current = profilesStore.profiles.find(p => p.id === currentId)
   if (!current) {
     appStore.setCurrentProfileId(profilesStore.profiles[0]?.id || 'default')

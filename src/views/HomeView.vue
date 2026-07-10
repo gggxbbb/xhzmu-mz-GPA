@@ -43,8 +43,8 @@ const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
 const uiStore = useUIStore()
 
-const currentProfile = computed(() => profilesStore.getProfile(appStore.currentProfileId.value))
-const currentGrades = computed(() => gradesStore.getGrades(appStore.currentProfileId.value))
+const currentProfile = computed(() => profilesStore.getProfile(appStore.currentProfileId))
+const currentGrades = computed(() => gradesStore.getGrades(appStore.currentProfileId))
 
 const gpa = useGPA(currentProfile, currentGrades)
 
@@ -66,6 +66,6 @@ const filteredClasses = computed(() => {
 const hasFilteredClasses = computed(() => Object.keys(filteredClasses.value).length > 0)
 
 function onUpdateGrade(courseName, value) {
-  gradesStore.setGrade(appStore.currentProfileId.value, courseName, value)
+  gradesStore.setGrade(appStore.currentProfileId, courseName, value)
 }
 </script>

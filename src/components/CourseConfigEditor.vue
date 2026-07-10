@@ -44,7 +44,7 @@ import { serializeClasses, parseClasses } from '../utils/parsers'
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 
-const currentProfile = computed(() => profilesStore.getProfile(appStore.currentProfileId.value))
+const currentProfile = computed(() => profilesStore.getProfile(appStore.currentProfileId))
 const draft = reactive({ name: '', targetGPA: 2.0, classes: {} })
 const semesterNames = reactive({})
 const textMode = ref('')

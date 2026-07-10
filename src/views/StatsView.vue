@@ -36,8 +36,8 @@ const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
 
-const currentProfile = computed(() => profilesStore.getProfile(appStore.currentProfileId.value))
-const currentGrades = computed(() => gradesStore.getGrades(appStore.currentProfileId.value))
+const currentProfile = computed(() => profilesStore.getProfile(appStore.currentProfileId))
+const currentGrades = computed(() => gradesStore.getGrades(appStore.currentProfileId))
 const gpa = useGPA(currentProfile, currentGrades)
 
 const failingCourses = computed(() => {

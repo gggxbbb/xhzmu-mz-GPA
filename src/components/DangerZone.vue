@@ -17,7 +17,7 @@ const gradesStore = useGradesStore()
 
 function clearGrades() {
   if (confirm('确定清除当前档案的所有成绩吗？此操作不可恢复。')) {
-    gradesStore.clearGrades(appStore.currentProfileId.value)
+    gradesStore.clearGrades(appStore.currentProfileId)
   }
 }
 
