@@ -1,3 +1,4 @@
+import './assets/styles.css'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
@@ -33,7 +34,8 @@ function initializeState() {
     profilesStore.resetToDefault()
   }
 
-  const current = profilesStore.getProfile(appStore.currentProfileId.value)
+  const currentId = appStore.currentProfileId.value
+  const current = profilesStore.profiles.find(p => p.id === currentId)
   if (!current) {
     appStore.setCurrentProfileId(profilesStore.profiles[0]?.id || 'default')
   }
@@ -47,10 +49,16 @@ function initializeState() {
     })
   }
 
-  appStore.$subscribe(save)
-  profilesStore.$subscribe(save)
-  gradesStore.$subscribe(save)
+  const unsubApp = appStore.$subscribe(save)
+  const unsubProfiles = profilesStore.$subscribe(save)
+  const unsubGrades = gradesStore.$subscribe(save)
   save()
+
+  window.addEventListener('beforeunload', () => {
+    unsubApp()
+    unsubProfiles()
+    unsubGrades()
+  })
 }
 
 initializeState()

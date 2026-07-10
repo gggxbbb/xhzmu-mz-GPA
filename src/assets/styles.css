@@ -75,6 +75,13 @@ body {
   min-height: 44px;
 }
 
+.btn:focus-visible,
+.input:focus-visible,
+.nav-item:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
 .btn-primary {
   background: var(--brand);
   color: white;
@@ -83,8 +90,8 @@ body {
 
 .btn-danger {
   background: #ffebee;
-  color: var(--danger);
-  border-color: #ffcdD2;
+  color: #c62828;
+  border-color: #ffcdd2;
 }
 
 .input {

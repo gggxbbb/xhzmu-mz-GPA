@@ -13,7 +13,3 @@ import AppNav from './components/AppNav.vue'
 
 const appStore = useAppStore()
 </script>
-
-<style>
-@import './assets/styles.css';
-</style>

@@ -6,7 +6,8 @@ import ProfileView from '../views/ProfileView.vue'
 const routes = [
   { path: '/', name: 'home', component: HomeView },
   { path: '/stats', name: 'stats', component: StatsView },
-  { path: '/profile', name: 'profile', component: ProfileView }
+  { path: '/profile', name: 'profile', component: ProfileView },
+  { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
 
 export default createRouter({
