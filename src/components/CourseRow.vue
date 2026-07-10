@@ -9,7 +9,7 @@
         type="number"
         class="input"
         style="width: 80px; text-align: center;"
-        aria-label="课程成绩"
+        :aria-label="`${course.name} 成绩`"
         min="0"
         max="100"
         step="1"

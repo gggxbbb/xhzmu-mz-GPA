@@ -1,15 +1,21 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
   const showVeryLongGPA = ref(false)
   const theme = ref('auto')
   const currentProfileId = ref('default')
 
-  const isDark = computed(() => {
+  const resolveDark = () => {
     if (theme.value === 'dark') return true
     if (theme.value === 'light') return false
     return window.matchMedia('(prefers-color-scheme: dark)').matches
+  }
+
+  const isDark = ref(resolveDark())
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  mediaQuery.addEventListener('change', () => {
+    isDark.value = resolveDark()
   })
 
   function setShowVeryLongGPA(value) {

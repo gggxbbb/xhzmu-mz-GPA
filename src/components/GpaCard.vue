@@ -2,7 +2,7 @@
   <div class="card" style="background: linear-gradient(135deg, var(--brand), var(--brand-dark)); color: white; border: none;">
     <div style="text-align: center;">
       <div style="font-size: 0.9rem; opacity: 0.9;">当前学位绩点</div>
-      <div class="gpa-display" :class="{ 'below-target': isBelowTarget }" style="color: white; margin: 0.5rem 0;">
+      <div class="gpa-display" :class="{ 'below-target': isBelowTarget }" style="margin: 0.5rem 0;">
         {{ formattedGPA }}
       </div>
       <div style="font-size: 0.85rem; opacity: 0.9;">
