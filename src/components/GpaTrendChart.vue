@@ -1,16 +1,21 @@
 <template>
-  <div class="card">
-    <div style="font-weight: bold; margin-bottom: 0.8rem;">学期 GPA 趋势</div>
-    <Bar :data="chartData" :options="chartOptions" />
-  </div>
+  <section class="card" aria-labelledby="gpa-trend-title">
+    <h2 id="gpa-trend-title" style="font-size: 1rem; font-weight: bold; margin: 0 0 0.8rem 0;">学期 GPA 趋势</h2>
+    <Bar
+      :data="chartData"
+      :options="chartOptions"
+      role="img"
+      aria-label="学期 GPA 趋势柱状图"
+    />
+  </section>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { Bar } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
+import { ChartJS } from '../plugins/chart.js'
 
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+const GPA_MAX = 5
 
 const props = defineProps({
   semesterGPAs: Object
@@ -28,8 +33,9 @@ const chartData = computed(() => ({
 
 const chartOptions = {
   responsive: true,
+  plugins: { legend: { display: false } },
   scales: {
-    y: { min: 0, max: 5 }
+    y: { min: 0, max: GPA_MAX }
   }
 }
 </script>

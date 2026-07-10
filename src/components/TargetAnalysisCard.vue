@@ -1,6 +1,6 @@
 <template>
-  <div class="card" style="background: #e8f5e9; border-color: #c8e6c9;">
-    <div style="font-weight: bold; margin-bottom: 0.5rem;">📈 目标达成分析</div>
+  <section class="card" style="background: #e8f5e9; border-color: #c8e6c9;" aria-labelledby="target-analysis-title">
+    <h2 id="target-analysis-title" style="font-size: 1rem; font-weight: bold; margin: 0 0 0.5rem 0;">📈 目标达成分析</h2>
     <div style="font-size: 0.85rem; color: #333; line-height: 1.6;">
       <div>• 按当前成绩，最终 GPA 预计 <strong>{{ currentGPA.toFixed(2) }}</strong></div>
       <div v-if="requiredAverage != null">
@@ -10,7 +10,7 @@
       <div>• 剩余课程平均 85 分时，最终 GPA 可达 <strong>{{ predicted85.toFixed(2) }}</strong></div>
       <div>• 剩余课程平均 90 分时，最终 GPA 可达 <strong>{{ predicted90.toFixed(2) }}</strong></div>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup>
