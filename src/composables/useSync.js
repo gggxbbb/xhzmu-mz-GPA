@@ -48,13 +48,7 @@ export function useSync() {
       const gradesStore = useGradesStore()
 
       const mergedProfiles = mergeProfiles(profiles, pullResult.profiles)
-      const mergedGrades = mergeGrades(
-        grades,
-        pullResult.grades,
-        mergedProfiles,
-        profiles,
-        pullResult.profiles
-      )
+      const mergedGrades = mergeGrades(grades, pullResult.grades, mergedProfiles)
 
       profilesStore.load(mergedProfiles)
       gradesStore.load(mergedGrades)

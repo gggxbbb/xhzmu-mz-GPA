@@ -118,9 +118,7 @@ async function initializeSupabase() {
     const mergedGrades = mergeGrades(
       gradesStore.gradesByProfile,
       pullResult.grades,
-      mergedProfiles,
-      profilesStore.profiles,
-      pullResult.profiles
+      mergedProfiles
     )
 
     profilesStore.load(mergedProfiles)
@@ -148,17 +146,15 @@ async function initializeSupabase() {
 
 async function bootstrap() {
   if (isSupabaseConfigured()) {
-    const [{ installErrorHandlers }, { useAnalytics }, { flush }] =
-      await Promise.all([
-        import('./services/supabase/errorReporter.js'),
-        import('./composables/useAnalytics.js'),
-        import('./services/supabase/analytics.js')
-      ])
+    const [{ installErrorHandlers }, { flush }] = await Promise.all([
+      import('./services/supabase/errorReporter.js'),
+      import('./services/supabase/analytics.js')
+    ])
 
     installErrorHandlers(app)
 
     const { trackPageView } = useAnalytics()
-    router.afterEach((to) => trackPageView(to.path, to.name))
+    router.afterEach((to) => trackPageView(to.path, to.name ?? to.path))
 
     initializeState({ flushAnalytics: flush })
     app.mount('#app')

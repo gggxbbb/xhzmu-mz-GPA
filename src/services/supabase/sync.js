@@ -105,33 +105,10 @@ export function mergeProfiles(localProfiles, remoteProfiles) {
   return merged
 }
 
-export function mergeGrades(
-  localGrades,
-  remoteGrades,
-  mergedProfiles,
-  localProfiles,
-  remoteProfiles
-) {
+export function mergeGrades(localGrades, remoteGrades, mergedProfiles) {
   const merged = {}
 
   for (const profile of mergedProfiles) {
-    const localProfile = localProfiles.find((p) => p.id === profile.id)
-    const remoteProfile = remoteProfiles.find((p) => p.id === profile.id)
-    const localProfileTs = localProfile ? toTimestamp(localProfile.updatedAt) : 0
-    const remoteProfileTs = remoteProfile ? toTimestamp(remoteProfile.updatedAt) : 0
-
-    // If the remote profile is newer, take all remote grades; if local is newer, take all local.
-    // When timestamps are equal, prefer remote (conservative strategy).
-    if (remoteProfileTs > localProfileTs) {
-      merged[profile.id] = remoteGrades[profile.id] ?? {}
-      continue
-    }
-    if (remoteProfileTs < localProfileTs) {
-      merged[profile.id] = localGrades[profile.id] ?? {}
-      continue
-    }
-
-    // Profile-level timestamps are equal: merge per-course using per-grade updated_at.
     const localCourses = localGrades[profile.id] ?? {}
     const remoteCourses = remoteGrades[profile.id] ?? {}
     const courseNames = new Set([
