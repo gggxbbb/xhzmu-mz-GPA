@@ -2,25 +2,32 @@ import { supabase } from './client.js'
 import { getCurrentUserId } from './auth.js'
 
 const RATE_LIMIT_WINDOW_MS = 60_000
-const RATE_LIMIT_MAX = 3
+const RATE_LIMIT_COUNT = 3
 
 const rateLimitMap = new Map()
+let errorHandlersInstalled = false
 
-function getRateLimitKey(component, message) {
-  return `${component}::${message}`
+function pruneStaleEntries(now) {
+  for (const [key, entry] of rateLimitMap) {
+    if (now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
+      rateLimitMap.delete(key)
+    }
+  }
 }
 
-function isRateLimited(component, message) {
-  const key = getRateLimitKey(component, message)
+function isRateLimited(component) {
   const now = Date.now()
-  let entry = rateLimitMap.get(key)
+
+  pruneStaleEntries(now)
+
+  let entry = rateLimitMap.get(component)
 
   if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
     entry = { count: 0, windowStart: now }
-    rateLimitMap.set(key, entry)
+    rateLimitMap.set(component, entry)
   }
 
-  if (entry.count >= RATE_LIMIT_MAX) {
+  if (entry.count >= RATE_LIMIT_COUNT) {
     return true
   }
 
@@ -32,7 +39,7 @@ export async function reportError(error, component = 'global') {
   const message = error?.message ?? String(error)
   const stack = error?.stack ?? null
 
-  if (isRateLimited(component, message)) {
+  if (isRateLimited(component)) {
     return
   }
 
@@ -53,10 +60,19 @@ export async function reportError(error, component = 'global') {
 }
 
 export function installErrorHandlers(app) {
+  if (errorHandlersInstalled) {
+    return
+  }
+  errorHandlersInstalled = true
+
   if (app?.config) {
     const existingHandler = app.config.errorHandler
     app.config.errorHandler = (err, instance, info) => {
-      reportError(err, 'vue')
+      try {
+        reportError(err, 'vue')
+      } catch {
+        // ignore to avoid re-triggering error handlers
+      }
       if (typeof existingHandler === 'function') {
         existingHandler(err, instance, info)
       }
@@ -66,7 +82,11 @@ export function installErrorHandlers(app) {
   if (typeof window !== 'undefined') {
     window.addEventListener('error', (event) => {
       const err = event.error ?? new Error(event.message ?? 'Unknown window error')
-      reportError(err, 'window')
+      try {
+        reportError(err, 'window')
+      } catch {
+        // ignore to avoid re-triggering error handlers
+      }
     })
 
     window.addEventListener('unhandledrejection', (event) => {
@@ -75,7 +95,11 @@ export function installErrorHandlers(app) {
         reason instanceof Error
           ? reason
           : new Error(typeof reason === 'string' ? reason : 'Unhandled promise rejection')
-      reportError(err, 'unhandledrejection')
+      try {
+        reportError(err, 'unhandledrejection')
+      } catch {
+        // ignore to avoid re-triggering error handlers
+      }
     })
   }
 }
