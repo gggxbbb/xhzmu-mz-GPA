@@ -1,5 +1,5 @@
 <template>
-  <label>
+  <label style="display: block; margin-bottom: 1rem;">
     <span class="visually-hidden">搜索课程</span>
     <input
       type="text"
