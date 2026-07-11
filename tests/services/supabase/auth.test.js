@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const getSessionMock = vi.fn()
-const signInAnonymouslyMock = vi.fn()
+const { getSessionMock, signInAnonymouslyMock } = vi.hoisted(() => ({
+  getSessionMock: vi.fn(),
+  signInAnonymouslyMock: vi.fn()
+}))
 
 vi.mock('../../../src/services/supabase/client.js', () => ({
   supabase: {
@@ -30,9 +32,10 @@ describe('Anonymous authentication service', () => {
       '../../../src/services/supabase/auth.js'
     )
 
-    await initAnonymousAuth()
+    const result = await initAnonymousAuth()
 
     expect(signInAnonymouslyMock).not.toHaveBeenCalled()
+    expect(result).toEqual({ user: existingUser, error: null })
     expect(getCurrentUserId()).toBe('existing-user-id')
     expect(isAuthenticated()).toBe(true)
   })
@@ -52,11 +55,81 @@ describe('Anonymous authentication service', () => {
       '../../../src/services/supabase/auth.js'
     )
 
-    await initAnonymousAuth()
+    const result = await initAnonymousAuth()
 
     expect(signInAnonymouslyMock).toHaveBeenCalled()
+    expect(result).toEqual({ user: anonymousUser, error: null })
     expect(getCurrentUserId()).toBe('anonymous-user-id')
     expect(isAuthenticated()).toBe(true)
+  })
+
+  it('falls back to anonymous sign-in when getSession returns an error', async () => {
+    const anonymousUser = { id: 'anonymous-user-id' }
+    const sessionError = new Error('session error')
+    getSessionMock.mockResolvedValue({
+      data: { session: null },
+      error: sessionError
+    })
+    signInAnonymouslyMock.mockResolvedValue({
+      data: { user: anonymousUser },
+      error: null
+    })
+
+    const { initAnonymousAuth, getCurrentUserId, isAuthenticated } = await import(
+      '../../../src/services/supabase/auth.js'
+    )
+
+    const result = await initAnonymousAuth()
+
+    expect(signInAnonymouslyMock).toHaveBeenCalled()
+    expect(result).toEqual({ user: anonymousUser, error: null })
+    expect(getCurrentUserId()).toBe('anonymous-user-id')
+    expect(isAuthenticated()).toBe(true)
+  })
+
+  it('returns user null and error when anonymous sign-in fails', async () => {
+    const signInError = new Error('anonymous sign-in failed')
+    getSessionMock.mockResolvedValue({
+      data: { session: null },
+      error: null
+    })
+    signInAnonymouslyMock.mockResolvedValue({
+      data: { user: null },
+      error: signInError
+    })
+
+    const { initAnonymousAuth, getCurrentUserId, isAuthenticated } = await import(
+      '../../../src/services/supabase/auth.js'
+    )
+
+    const result = await initAnonymousAuth()
+
+    expect(signInAnonymouslyMock).toHaveBeenCalled()
+    expect(result).toEqual({ user: null, error: signInError })
+    expect(getCurrentUserId()).toBeNull()
+    expect(isAuthenticated()).toBe(false)
+  })
+
+  it('shares the same in-flight promise for concurrent calls', async () => {
+    const anonymousUser = { id: 'anonymous-user-id' }
+    getSessionMock.mockResolvedValue({
+      data: { session: null },
+      error: null
+    })
+    signInAnonymouslyMock.mockResolvedValue({
+      data: { user: anonymousUser },
+      error: null
+    })
+
+    const { initAnonymousAuth, getCurrentUserId } = await import(
+      '../../../src/services/supabase/auth.js'
+    )
+
+    const [first, second] = await Promise.all([initAnonymousAuth(), initAnonymousAuth()])
+
+    expect(first).toBe(second)
+    expect(signInAnonymouslyMock).toHaveBeenCalledTimes(1)
+    expect(getCurrentUserId()).toBe('anonymous-user-id')
   })
 
   it('returns null for getCurrentUserId before initialization', async () => {
