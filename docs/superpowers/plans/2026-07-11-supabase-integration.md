@@ -4,7 +4,7 @@
 
 **Goal:** 将 GPA 计算器的失效分析脚本替换为 Supabase，新增匿名登录、云端数据备份/恢复、分享码、事件统计和异常上报，同时保持离线优先。
 
-**Architecture:** 在 `src/services/supabase/` 下封装 client、auth、sync、analytics、errorReporter；通过新增 composables 接入 Vue 组件；`main.js` 异步初始化 Supabase 且不阻塞现有 localStorage 渲染；所有云端操作失败时静默降级。
+**Architecture:** 在 `src/services/supabase/` 下封装 client、auth、sync、analytics、errorReporter、config；通过 `useSync` / `useAnalytics` composables 接入 Vue 组件；`main.js` 按是否配置 Supabase 分支初始化，未配置时离线运行，已配置时按需动态导入服务并把 Supabase client 拆分为独立 chunk；所有云端操作失败时静默降级。同步以 profile 和单条 grade 的 `updatedAt` 做 last-write-wins 合并。
 
 **Tech Stack:** Vue 3, Pinia, Vite, Vitest, Supabase (Postgres + Auth), `@supabase/supabase-js`, Supabase CLI (`npx supabase`)
 
@@ -22,16 +22,16 @@ supabase/
 src/
   services/
     supabase/
-      client.js                       # createClient + 环境校验
+      config.js                       # 环境变量是否配置的判断
+      client.js                       # createClient，未配置时返回 null
       auth.js                         # 匿名登录、session 恢复
-      sync.js                         # 本地状态与云端双向同步
+      sync.js                         # 本地状态与云端双向同步 + 合并工具
       analytics.js                    # 事件队列与上报
       errorReporter.js                # 全局异常捕获与上报
+      shareCodes.js                   # 分享码生成与读取
   composables/
-    useSupabaseAuth.js                # 匿名登录状态组合式函数
     useSync.js                        # 同步状态与手动触发
     useAnalytics.js                   # 事件上报便捷方法
-    useErrorReporter.js               # 错误上报初始化
   components/
     SyncStatusBar.vue                 # 在线/同步/离线状态条
     ShareCodeDialog.vue               # 生成分享码弹窗
@@ -266,11 +266,12 @@ describe('supabase client', () => {
     )
   })
 
-  it('throws if env vars are missing', async () => {
+  it('returns null client if env vars are missing', async () => {
     vi.unstubAllEnvs()
     vi.stubEnv('VITE_SUPABASE_URL', '')
     vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '')
-    await expect(import('../../../src/services/supabase/client.js')).rejects.toThrow()
+    const { supabase } = await import('../../../src/services/supabase/client.js')
+    expect(supabase).toBeNull()
   })
 })
 ```
@@ -283,7 +284,18 @@ npm test -- tests/services/supabase/client.test.js
 
 Expected: FAIL（模块不存在）。
 
-- [ ] **Step 3: 实现 client.js**
+- [ ] **Step 3: 实现 config.js 与 client.js**
+
+Create `src/services/supabase/config.js`:
+
+```js
+export function isSupabaseConfigured() {
+  return Boolean(
+    import.meta.env.VITE_SUPABASE_URL &&
+      import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+  )
+}
+```
 
 Create `src/services/supabase/client.js`:
 
@@ -293,17 +305,21 @@ import { createClient } from '@supabase/supabase-js'
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
-if (!url || !key) {
-  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY')
+function createSafeClient() {
+  if (!url || !key) {
+    return null
+  }
+
+  return createClient(url, key, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false
+    }
+  })
 }
 
-export const supabase = createClient(url, key, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: false
-  }
-})
+export const supabase = createSafeClient()
 ```
 
 - [ ] **Step 4: 运行测试确认通过**
@@ -317,7 +333,7 @@ Expected: PASS。
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/services/supabase/client.js tests/services/supabase/client.test.js
+git add src/services/supabase/config.js src/services/supabase/client.js tests/services/supabase/client.test.js
 git commit -m "feat: initialize Supabase client with env validation"
 ```
 
@@ -509,7 +525,7 @@ vi.mock('../../../src/services/supabase/auth.js', () => ({
   getCurrentUserId: () => 'u1'
 }))
 
-import { pushState, pullState } from '../../../src/services/supabase/sync.js'
+import { pushState, pullState, mergeProfiles, mergeGrades } from '../../../src/services/supabase/sync.js'
 
 describe('sync', () => {
   beforeEach(() => {
@@ -517,9 +533,10 @@ describe('sync', () => {
     defineMock()
   })
 
-  it('pushes profiles and grades to Supabase', async () => {
+  it('pushes profiles and grades with updated_at', async () => {
+    const now = Date.now()
     const state = {
-      profiles: [{ id: 'p1', name: '默认', targetGPA: 3.5, classes: {} }],
+      profiles: [{ id: 'p1', name: '默认', targetGPA: 3.5, classes: {}, updatedAt: now }],
       grades: { p1: { 数学: 90 } }
     }
     await pushState(state)
@@ -533,6 +550,20 @@ describe('sync', () => {
     const result = await pullState()
     expect(result.profiles).toEqual([])
     expect(result.grades).toEqual({})
+  })
+
+  it('mergeProfiles keeps newer local profile', async () => {
+    const local = [{ id: 'p1', name: 'Local', updatedAt: 2000 }]
+    const remote = [{ id: 'p1', name: 'Remote', updatedAt: 1000 }]
+    expect(mergeProfiles(local, remote)).toEqual(local)
+  })
+
+  it('mergeGrades prefers remote grade when newer', async () => {
+    const localGrades = { p1: { math: { score: 80, updatedAt: 1000 } } }
+    const remoteGrades = { p1: { math: { score: 95, updatedAt: 2000 } } }
+    expect(mergeGrades(localGrades, remoteGrades, [{ id: 'p1' }])).toEqual({
+      p1: { math: { score: 95, updatedAt: 2000 } }
+    })
   })
 })
 ```
@@ -553,80 +584,227 @@ Create `src/services/supabase/sync.js`:
 import { supabase } from './client.js'
 import { getCurrentUserId } from './auth.js'
 
-export async function pushState({ profiles, grades }) {
-  const userId = getCurrentUserId()
-  if (!userId) return { error: new Error('Not authenticated') }
-
-  const now = new Date().toISOString()
-
-  const profileRows = profiles.map(p => ({
-    user_id: userId,
-    local_id: p.id,
-    name: p.name,
-    target_gpa: p.targetGPA,
-    classes: p.classes,
-    updated_at: now
-  }))
-
-  const gradeRows = []
-  for (const profileId of Object.keys(grades)) {
-    for (const courseName of Object.keys(grades[profileId])) {
-      gradeRows.push({
-        user_id: userId,
-        profile_local_id: profileId,
-        course_name: courseName,
-        score: grades[profileId][courseName],
-        updated_at: now
-      })
-    }
+function toTimestamp(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
   }
-
-  const errors = []
-  if (profileRows.length > 0) {
-    const { error } = await supabase.from('profiles').upsert(profileRows, { onConflict: 'user_id,local_id' })
-    if (error) errors.push(error)
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    return Number.isNaN(parsed) ? 0 : parsed
   }
-
-  if (gradeRows.length > 0) {
-    const { error } = await supabase.from('grades').upsert(gradeRows, { onConflict: 'user_id,profile_local_id,course_name' })
-    if (error) errors.push(error)
-  }
-
-  return { error: errors.length > 0 ? errors[0] : null }
+  return 0
 }
 
-export async function pullState() {
-  const userId = getCurrentUserId()
-  if (!userId) return { profiles: [], grades: {}, error: new Error('Not authenticated') }
+function toProfileRow(userId, profile) {
+  return {
+    user_id: userId,
+    local_id: profile.id,
+    name: profile.name,
+    target_gpa: profile.targetGPA,
+    classes: profile.classes ?? {},
+    updated_at:
+      profile.updatedAt != null
+        ? new Date(profile.updatedAt).toISOString()
+        : new Date().toISOString()
+  }
+}
 
-  const { data: profileRows, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', userId)
-
-  if (profileError) return { profiles: [], grades: {}, error: profileError }
-
-  const { data: gradeRows, error: gradeError } = await supabase
-    .from('grades')
-    .select('*')
-    .eq('user_id', userId)
-
-  if (gradeError) return { profiles: [], grades: {}, error: gradeError }
-
-  const profiles = (profileRows || []).map(row => ({
+function fromProfileRow(row) {
+  return {
     id: row.local_id,
     name: row.name,
     targetGPA: row.target_gpa,
-    classes: row.classes
-  }))
+    classes: row.classes ?? {},
+    updatedAt: toTimestamp(row.updated_at)
+  }
+}
 
+function extractGrade(value) {
+  if (value !== null && typeof value === 'object' && !Array.isArray(value) && typeof value.score === 'number') {
+    return { score: value.score, updatedAt: value.updatedAt }
+  }
+  if (typeof value === 'number') {
+    return { score: value, updatedAt: Date.now() }
+  }
+  return null
+}
+
+function toGradeRows(userId, gradesByProfile) {
+  const rows = []
+  for (const [profileLocalId, courses] of Object.entries(gradesByProfile)) {
+    for (const [courseName, value] of Object.entries(courses)) {
+      const grade = extractGrade(value)
+      if (!grade) continue
+      rows.push({
+        user_id: userId,
+        profile_local_id: profileLocalId,
+        course_name: courseName,
+        score: grade.score,
+        updated_at:
+          grade.updatedAt != null
+            ? new Date(grade.updatedAt).toISOString()
+            : new Date().toISOString()
+      })
+    }
+  }
+  return rows
+}
+
+function fromGradeRows(rows) {
   const grades = {}
-  for (const row of gradeRows || []) {
-    if (!grades[row.profile_local_id]) grades[row.profile_local_id] = {}
-    grades[row.profile_local_id][row.course_name] = row.score
+  for (const row of rows) {
+    if (!grades[row.profile_local_id]) {
+      grades[row.profile_local_id] = {}
+    }
+    grades[row.profile_local_id][row.course_name] = {
+      score: row.score,
+      updatedAt: toTimestamp(row.updated_at)
+    }
+  }
+  return grades
+}
+
+export function mergeProfiles(localProfiles, remoteProfiles) {
+  const localMap = new Map(localProfiles.map((p) => [p.id, p]))
+  const remoteMap = new Map(remoteProfiles.map((p) => [p.id, p]))
+  const mergedIds = new Set([...localMap.keys(), ...remoteMap.keys()])
+  const merged = []
+
+  for (const id of mergedIds) {
+    const local = localMap.get(id)
+    const remote = remoteMap.get(id)
+
+    if (!local) {
+      merged.push(remote)
+    } else if (!remote) {
+      merged.push(local)
+    } else if (toTimestamp(remote.updatedAt) >= toTimestamp(local.updatedAt)) {
+      merged.push(remote)
+    } else {
+      merged.push(local)
+    }
   }
 
-  return { profiles, grades, error: null }
+  return merged
+}
+
+export function mergeGrades(localGrades, remoteGrades, mergedProfiles) {
+  const merged = {}
+
+  for (const profile of mergedProfiles) {
+    const localCourses = localGrades[profile.id] ?? {}
+    const remoteCourses = remoteGrades[profile.id] ?? {}
+    const courseNames = new Set([
+      ...Object.keys(localCourses),
+      ...Object.keys(remoteCourses)
+    ])
+    const mergedCourses = {}
+
+    for (const courseName of courseNames) {
+      const localGrade = extractGrade(localCourses[courseName])
+      const remoteGrade = extractGrade(remoteCourses[courseName])
+
+      if (!localGrade) {
+        if (remoteGrade) mergedCourses[courseName] = remoteGrade
+        continue
+      }
+      if (!remoteGrade) {
+        mergedCourses[courseName] = localGrade
+        continue
+      }
+
+      const localTs = toTimestamp(localGrade.updatedAt)
+      const remoteTs = toTimestamp(remoteGrade.updatedAt)
+
+      if (remoteTs >= localTs) {
+        mergedCourses[courseName] = remoteGrade
+      } else {
+        mergedCourses[courseName] = localGrade
+      }
+    }
+
+    merged[profile.id] = mergedCourses
+  }
+
+  return merged
+}
+
+export async function pushState({ profiles = [], grades = {} } = {}) {
+  if (!supabase) {
+    return { error: new Error('Supabase client is not initialized') }
+  }
+
+  const userId = getCurrentUserId()
+  if (!userId) {
+    return { error: new Error('User not authenticated') }
+  }
+
+  const profileRows = profiles.map((profile) => toProfileRow(userId, profile))
+  if (profileRows.length > 0) {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(profileRows, { onConflict: 'user_id,local_id' })
+
+    if (error) {
+      return { error }
+    }
+  }
+
+  const gradeRows = toGradeRows(userId, grades)
+  if (gradeRows.length > 0) {
+    const { error } = await supabase
+      .from('grades')
+      .upsert(gradeRows, { onConflict: 'user_id,profile_local_id,course_name' })
+
+    if (error) {
+      return { error }
+    }
+  }
+
+  return { error: null }
+}
+
+export async function pullState() {
+  if (!supabase) {
+    return {
+      profiles: [],
+      grades: {},
+      error: new Error('Supabase client is not initialized')
+    }
+  }
+
+  const userId = getCurrentUserId()
+  if (!userId) {
+    return {
+      profiles: [],
+      grades: {},
+      error: new Error('User not authenticated')
+    }
+  }
+
+  const { data: profileRows, error: profilesError } = await supabase
+    .from('profiles')
+    .select('local_id, name, target_gpa, classes, updated_at')
+    .eq('user_id', userId)
+
+  if (profilesError) {
+    return { profiles: [], grades: {}, error: profilesError }
+  }
+
+  const { data: gradeRows, error: gradesError } = await supabase
+    .from('grades')
+    .select('profile_local_id, course_name, score, updated_at')
+    .eq('user_id', userId)
+
+  if (gradesError) {
+    return { profiles: [], grades: {}, error: gradesError }
+  }
+
+  return {
+    profiles: (profileRows ?? []).map(fromProfileRow),
+    grades: fromGradeRows(gradeRows ?? []),
+    error: null
+  }
 }
 ```
 
@@ -951,88 +1129,92 @@ git commit -m "feat: add Supabase error reporter with rate limiting"
 ## Task 8: Composables
 
 **Files:**
-- Create: `src/composables/useSupabaseAuth.js`
 - Create: `src/composables/useSync.js`
 - Create: `src/composables/useAnalytics.js`
-- Create: `src/composables/useErrorReporter.js`
 
-- [ ] **Step 1: 实现 useSupabaseAuth.js**
+说明：匿名认证与错误上报未封装为独立 composable，而是直接在 `main.js` 中按需动态导入服务并调用，以减少未配置 Supabase 时的初始 bundle。
 
-Create `src/composables/useSupabaseAuth.js`:
-
-```js
-import { ref, onMounted } from 'vue'
-import { initAnonymousAuth, getCurrentUserId } from '../services/supabase/auth.js'
-
-const ready = ref(false)
-const userId = ref(null)
-const error = ref(null)
-
-export function useSupabaseAuth() {
-  onMounted(async () => {
-    if (ready.value) return
-    try {
-      const { user, error: authError } = await initAnonymousAuth()
-      if (authError) {
-        error.value = authError
-        console.error('Supabase auth init failed', authError)
-      }
-      userId.value = user?.id || getCurrentUserId()
-    } catch (e) {
-      error.value = e
-      console.error('Supabase auth init failed', e)
-    } finally {
-      ready.value = true
-    }
-  })
-
-  return { ready, userId, error }
-}
-```
-
-- [ ] **Step 2: 实现 useSync.js**
+- [ ] **Step 1: 实现 useSync.js**
 
 Create `src/composables/useSync.js`:
 
 ```js
 import { ref } from 'vue'
-import { pushState, pullState } from '../services/supabase/sync.js'
+import { isSupabaseConfigured } from '../services/supabase/config.js'
+import { useProfilesStore } from '../stores/profiles.js'
+import { useGradesStore } from '../stores/grades.js'
+import { useAnalytics } from './useAnalytics.js'
 
 const status = ref('idle') // idle | syncing | offline | error
 const lastError = ref(null)
 
+const { trackSyncCompleted, trackSyncFailed } = useAnalytics()
+
 export function useSync() {
-  async function sync({ profiles, grades }) {
-    if (!navigator.onLine) {
-      status.value = 'offline'
-      return
-    }
-    status.value = 'syncing'
+  async function sync({ profiles = [], grades = {} } = {}) {
     lastError.value = null
 
-    const pushResult = await pushState({ profiles, grades })
-    if (pushResult.error) {
-      status.value = 'error'
-      lastError.value = pushResult.error
-      return
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase is not configured; skipping sync.')
+      status.value = 'offline'
+      return { error: null }
     }
 
-    const pullResult = await pullState()
-    if (pullResult.error) {
-      status.value = 'error'
-      lastError.value = pullResult.error
-      return
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      status.value = 'offline'
+      return { error: new Error('Offline') }
     }
 
-    status.value = 'idle'
-    return pullResult
+    status.value = 'syncing'
+
+    try {
+      const {
+        pushState,
+        pullState,
+        mergeProfiles,
+        mergeGrades
+      } = await import('../services/supabase/sync.js')
+
+      const pushResult = await pushState({ profiles, grades })
+      if (pushResult?.error) {
+        throw pushResult.error
+      }
+
+      const pullResult = await pullState()
+      if (pullResult?.error) {
+        throw pullResult.error
+      }
+
+      const profilesStore = useProfilesStore()
+      const gradesStore = useGradesStore()
+
+      const mergedProfiles = mergeProfiles(profiles, pullResult.profiles)
+      const mergedGrades = mergeGrades(grades, pullResult.grades, mergedProfiles)
+
+      profilesStore.load(mergedProfiles)
+      gradesStore.load(mergedGrades)
+
+      status.value = 'idle'
+      trackSyncCompleted('pull')
+
+      return {
+        profiles: mergedProfiles,
+        grades: mergedGrades,
+        error: null
+      }
+    } catch (err) {
+      status.value = 'error'
+      lastError.value = err
+      trackSyncFailed(String(err?.message ?? err))
+      return { error: err }
+    }
   }
 
   return { status, lastError, sync }
 }
 ```
 
-- [ ] **Step 3: 实现 useAnalytics.js**
+- [ ] **Step 2: 实现 useAnalytics.js**
 
 Create `src/composables/useAnalytics.js`:
 
@@ -1056,22 +1238,10 @@ export function useAnalytics() {
 }
 ```
 
-- [ ] **Step 4: 实现 useErrorReporter.js**
-
-Create `src/composables/useErrorReporter.js`:
-
-```js
-import { installErrorHandlers } from '../services/supabase/errorReporter.js'
-
-export function useErrorReporter(app) {
-  installErrorHandlers(app)
-}
-```
-
-- [ ] **Step 5: 提交**
+- [ ] **Step 3: 提交**
 
 ```bash
-git add src/composables/useSupabaseAuth.js src/composables/useSync.js src/composables/useAnalytics.js src/composables/useErrorReporter.js
+git add src/composables/useSync.js src/composables/useAnalytics.js
 git commit -m "feat: add Supabase composables"
 ```
 
@@ -1431,22 +1601,19 @@ import { migrateLegacyData, hasLegacyData } from './utils/migration'
 import { useAppStore } from './stores/app'
 import { useProfilesStore } from './stores/profiles'
 import { useGradesStore } from './stores/grades'
-import { initAnonymousAuth } from './services/supabase/auth.js'
-import { pushState, pullState } from './services/supabase/sync.js'
-import { flush } from './services/supabase/analytics.js'
-import { installErrorHandlers } from './services/supabase/errorReporter.js'
+import { useSync } from './composables/useSync.js'
 import { useAnalytics } from './composables/useAnalytics.js'
+import { isSupabaseConfigured } from './services/supabase/config.js'
 
 const pinia = createPinia()
 const app = createApp(App)
 
 app.use(pinia)
 app.use(router)
-installErrorHandlers(app)
 
-const { trackPageView } = useAnalytics()
+const { status, lastError } = useSync()
 
-function initializeState() {
+function initializeState({ flushAnalytics } = {}) {
   const appStore = useAppStore()
   const profilesStore = useProfilesStore()
   const gradesStore = useGradesStore()
@@ -1466,7 +1633,7 @@ function initializeState() {
   }
 
   const currentId = appStore.currentProfileId
-  const current = profilesStore.profiles.find(p => p.id === currentId)
+  const current = profilesStore.profiles.find((p) => p.id === currentId)
   if (!current) {
     appStore.setCurrentProfileId(profilesStore.profiles[0]?.id || 'default')
   }
@@ -1493,41 +1660,104 @@ function initializeState() {
     unsubApp()
     unsubProfiles()
     unsubGrades()
+    flushAnalytics?.().catch((err) =>
+      console.error('Failed to flush analytics on unload:', err)
+    )
   })
 }
 
 async function initializeSupabase() {
+  status.value = 'syncing'
+  lastError.value = null
+
   try {
+    const [
+      { initAnonymousAuth },
+      { pushState, pullState, mergeProfiles, mergeGrades }
+    ] = await Promise.all([
+      import('./services/supabase/auth.js'),
+      import('./services/supabase/sync.js')
+    ])
+
     const { user, error: authError } = await initAnonymousAuth()
     if (authError || !user) {
-      console.error('Supabase auth initialization failed', authError)
-      return
+      throw authError || new Error('Supabase anonymous auth failed')
     }
 
+    const appStore = useAppStore()
     const profilesStore = useProfilesStore()
     const gradesStore = useGradesStore()
+    const { trackSyncCompleted, trackSyncFailed } = useAnalytics()
 
-    await pushState({
-      profiles: profilesStore.dump(),
-      grades: gradesStore.dump()
+    const pushResult = await pushState({
+      profiles: profilesStore.profiles,
+      grades: gradesStore.gradesByProfile
     })
-
-    const { profiles, grades, error } = await pullState()
-    if (!error) {
-      profilesStore.load(profiles)
-      gradesStore.load(grades)
+    if (pushResult?.error) {
+      throw pushResult.error
     }
-  } catch (e) {
-    console.error('Supabase initialization failed', e)
+
+    const pullResult = await pullState()
+    if (pullResult?.error) {
+      throw pullResult.error
+    }
+
+    const mergedProfiles = mergeProfiles(
+      profilesStore.profiles,
+      pullResult.profiles
+    )
+    const mergedGrades = mergeGrades(
+      gradesStore.gradesByProfile,
+      pullResult.grades,
+      mergedProfiles
+    )
+
+    profilesStore.load(mergedProfiles)
+    gradesStore.load(mergedGrades)
+
+    const currentId = appStore.currentProfileId
+    if (!mergedProfiles.some((p) => p.id === currentId)) {
+      appStore.setCurrentProfileId(mergedProfiles[0]?.id || 'default')
+    }
+
+    status.value = 'idle'
+    trackSyncCompleted('push_pull')
+  } catch (err) {
+    status.value = 'error'
+    lastError.value = err
+    const { trackSyncFailed } = useAnalytics()
+    trackSyncFailed(String(err?.message ?? err))
+    console.error('Failed to initialize Supabase:', err)
   }
 }
 
-initializeState()
-app.mount('#app')
-initializeSupabase()
+async function bootstrap() {
+  if (isSupabaseConfigured()) {
+    const [{ installErrorHandlers }, { flush }] = await Promise.all([
+      import('./services/supabase/errorReporter.js'),
+      import('./services/supabase/analytics.js')
+    ])
 
-router.afterEach((to) => {
-  trackPageView(to.path, to.name)
+    installErrorHandlers(app)
+
+    const { trackPageView } = useAnalytics()
+    router.afterEach((to) => trackPageView(to.path, to.name ?? to.path))
+
+    initializeState({ flushAnalytics: flush })
+    app.mount('#app')
+    await initializeSupabase()
+  } else {
+    console.warn(
+      'Supabase environment variables are missing; running without cloud sync.'
+    )
+    status.value = 'offline'
+    initializeState()
+    app.mount('#app')
+  }
+}
+
+bootstrap().catch((err) => {
+  console.error('Bootstrap failed:', err)
 })
 ```
 
@@ -1547,48 +1777,69 @@ Modify `src/App.vue`:
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useAppStore } from './stores/app'
+import { useProfilesStore } from './stores/profiles'
+import { useGradesStore } from './stores/grades'
 import AppNav from './components/AppNav.vue'
 import SyncStatusBar from './components/SyncStatusBar.vue'
 import { useSync } from './composables/useSync.js'
-import { useProfilesStore } from './stores/profiles.js'
-import { useGradesStore } from './stores/grades.js'
 
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
 const { status: syncStatus, sync } = useSync()
 
-let unsubscribe = null
+let syncTimeout = null
+let pendingSync = false
 
-onMounted(() => {
-  const combinedSubscribe = () => {
-    sync({ profiles: profilesStore.dump(), grades: gradesStore.dump() })
+function syncStores() {
+  if (syncStatus.value === 'syncing') {
+    pendingSync = true
+    return
   }
-  const unsubProfiles = profilesStore.$subscribe(combinedSubscribe)
-  const unsubGrades = gradesStore.$subscribe(combinedSubscribe)
+  pendingSync = false
+  clearTimeout(syncTimeout)
+  syncTimeout = setTimeout(() => {
+    sync({
+      profiles: profilesStore.profiles,
+      grades: gradesStore.gradesByProfile
+    })
+  }, 3000)
+}
 
-  const handleOnline = () => combinedSubscribe()
-  const handleVisible = () => {
-    if (document.visibilityState === 'visible') {
-      combinedSubscribe()
-    }
-  }
-
-  window.addEventListener('online', handleOnline)
-  document.addEventListener('visibilitychange', handleVisible)
-
-  unsubscribe = () => {
-    unsubProfiles()
-    unsubGrades()
-    window.removeEventListener('online', handleOnline)
-    document.removeEventListener('visibilitychange', handleVisible)
+const unwatchStatus = watch(syncStatus, (newStatus) => {
+  if (newStatus === 'idle' && pendingSync) {
+    pendingSync = false
+    syncStores()
   }
 })
 
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible') {
+    syncStores()
+  }
+}
+
+const unsubs = []
+
+onMounted(() => {
+  unsubs.push(profilesStore.$subscribe(syncStores))
+  unsubs.push(gradesStore.$subscribe(syncStores))
+
+  window.addEventListener('online', syncStores)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
 onUnmounted(() => {
-  if (unsubscribe) unsubscribe()
+  clearTimeout(syncTimeout)
+  unwatchStatus()
+
+  unsubs.forEach((unsub) => unsub())
+  unsubs.length = 0
+
+  window.removeEventListener('online', syncStores)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 ```
@@ -1671,9 +1922,30 @@ async function syncNow() {
   })
 }
 
-function handleRecovered(payload) {
-  if (payload.profiles) profilesStore.load(payload.profiles)
-  if (payload.grades) gradesStore.load(payload.grades)
+async function handleRecovered(payload) {
+  if (!payload) return
+
+  const { mergeProfiles, mergeGrades } = await import('../services/supabase/sync.js')
+
+  let mergedProfiles = profilesStore.profiles
+  if (Array.isArray(payload.profiles)) {
+    mergedProfiles = mergeProfiles(profilesStore.profiles, payload.profiles)
+    profilesStore.load(mergedProfiles)
+  }
+
+  if (payload.grades && typeof payload.grades === 'object' && !Array.isArray(payload.grades)) {
+    const mergedGrades = mergeGrades(
+      gradesStore.gradesByProfile,
+      payload.grades,
+      mergedProfiles
+    )
+    gradesStore.load(mergedGrades)
+  }
+
+  const firstProfileId = mergedProfiles?.[0]?.id
+  if (firstProfileId) {
+    appStore.setCurrentProfileId(firstProfileId)
+  }
 }
 </script>
 ```
@@ -1698,7 +1970,7 @@ git commit -m "feat: add sync/share/recover actions to profile page"
 npm run build
 ```
 
-Expected: 无构建错误。
+Expected: 无构建错误；构建产物中 Supabase 相关代码应拆分为独立 chunk（如 `assets/supabase-*.js`），主 bundle 不显著膨胀。
 
 - [ ] **Step 2: 运行全部测试**
 
@@ -1756,6 +2028,7 @@ git commit --allow-empty -m "test: manual e2e verification passed"
 
 ### Type Consistency
 
-- `profiles` 字段统一使用 `targetGPA`（前端）和 `target_gpa`（DB）。
-- `grades` 前端结构为 `{ profileId: { courseName: score } }`，DB 按行存储。
-- `sync.js` 的 `pushState` / `pullState` 与 composables 中调用方式一致。
+- `profiles` 字段统一使用 `targetGPA`（前端）和 `target_gpa`（DB），并携带 `updatedAt` 时间戳用于 last-write-wins 合并。
+- `grades` 前端结构为 `{ profileId: { courseName: { score, updatedAt } } }`，兼容旧版纯数字成绩；DB 按行存储。
+- `sync.js` 暴露 `mergeProfiles` / `mergeGrades` 合并工具，供 `useSync`、初始化流程和分享码恢复共同使用。
+- `client.js` 未配置环境变量时导出 `null`，由 `config.js` 的 `isSupabaseConfigured()` 统一判断，所有服务在 `supabase === null` 时短路返回错误。

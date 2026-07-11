@@ -9,7 +9,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useAppStore } from './stores/app'
 import { useProfilesStore } from './stores/profiles'
 import { useGradesStore } from './stores/grades'
@@ -23,9 +23,14 @@ const gradesStore = useGradesStore()
 const { status: syncStatus, sync } = useSync()
 
 let syncTimeout = null
+let pendingSync = false
 
 function syncStores() {
-  if (syncStatus.value === 'syncing') return
+  if (syncStatus.value === 'syncing') {
+    pendingSync = true
+    return
+  }
+  pendingSync = false
   clearTimeout(syncTimeout)
   syncTimeout = setTimeout(() => {
     sync({
@@ -34,6 +39,13 @@ function syncStores() {
     })
   }, 3000)
 }
+
+const unwatchStatus = watch(syncStatus, (newStatus) => {
+  if (newStatus === 'idle' && pendingSync) {
+    pendingSync = false
+    syncStores()
+  }
+})
 
 function handleVisibilityChange() {
   if (document.visibilityState === 'visible') {
@@ -53,6 +65,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearTimeout(syncTimeout)
+  unwatchStatus()
 
   unsubs.forEach((unsub) => unsub())
   unsubs.length = 0

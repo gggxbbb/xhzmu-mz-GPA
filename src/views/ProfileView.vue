@@ -84,17 +84,27 @@ async function syncNow() {
   await sync(sharePayload.value)
 }
 
-function handleRecovered(payload) {
+async function handleRecovered(payload) {
   if (!payload) return
 
+  const { mergeProfiles, mergeGrades } = await import('../services/supabase/sync.js')
+
+  let mergedProfiles = profilesStore.profiles
   if (Array.isArray(payload.profiles)) {
-    profilesStore.load(payload.profiles)
-  }
-  if (payload.grades && typeof payload.grades === 'object' && !Array.isArray(payload.grades)) {
-    gradesStore.load(payload.grades)
+    mergedProfiles = mergeProfiles(profilesStore.profiles, payload.profiles)
+    profilesStore.load(mergedProfiles)
   }
 
-  const firstProfileId = payload.profiles?.[0]?.id
+  if (payload.grades && typeof payload.grades === 'object' && !Array.isArray(payload.grades)) {
+    const mergedGrades = mergeGrades(
+      gradesStore.gradesByProfile,
+      payload.grades,
+      mergedProfiles
+    )
+    gradesStore.load(mergedGrades)
+  }
+
+  const firstProfileId = mergedProfiles?.[0]?.id
   if (firstProfileId) {
     appStore.setCurrentProfileId(firstProfileId)
   }
