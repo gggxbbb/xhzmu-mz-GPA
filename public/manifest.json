@@ -1,9 +1,10 @@
 {
     "name": "学位绩点计算器",
     "short_name": "GPA",
-    "description": "一个简单的 GPA 计算器",
+    "description": "一个现代化的 GPA 计算器",
     "id": "https://gpa.gxb.pub",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
     "display_override": [
         "window-controls-overlay",
@@ -11,6 +12,8 @@
         "minimal-ui",
         "browser"
     ],
+    "theme_color": "#66ccff",
+    "background_color": "#ffffff",
     "icons": [
         {
             "src": "img/AppImages/windows11/SmallTile.scale-100.png",
@@ -460,6 +463,5 @@
             "src": "img/AppImages/ios/1024.png",
             "sizes": "1024x1024"
         }
-    ],
-    "theme_color": "#66ccff"
+    ]
 }

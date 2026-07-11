@@ -1,0 +1,185 @@
+:root {
+  --brand: #66ccff;
+  --brand-dark: #3a8bc3;
+  --danger: #f44336;
+  --warning: #ff9800;
+  --success: #4caf50;
+  --radius: 0.75rem;
+  --spacing: 1rem;
+  --nav-height: 64px;
+}
+
+:root,
+[data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f5f5f5;
+  --text: #1a1a1a;
+  --muted: #666666;
+  --border: #dddddd;
+}
+
+[data-theme="dark"] {
+  --bg: #13171f;
+  --surface: #1e232d;
+  --text: #f0f0f0;
+  --muted: #a0a0a0;
+  --border: #333844;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1;
+  padding: var(--spacing);
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--spacing);
+  margin-bottom: var(--spacing);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  padding: 0.6em 1em;
+  border-radius: 0.5em;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.95rem;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.btn:focus-visible,
+.input:focus-visible,
+.nav-item:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: white;
+  border-color: var(--brand);
+}
+
+.btn-danger {
+  background: #ffebee;
+  color: #c62828;
+  border-color: #ffcdd2;
+}
+
+.input {
+  width: 100%;
+  padding: 0.6em;
+  border: 1px solid var(--border);
+  border-radius: 0.5em;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+  min-height: 44px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.semester-header {
+  width: 100%;
+  padding: 0.8rem;
+  background: var(--surface);
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.semester-header:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.gpa-display {
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+
+.gpa-display.below-target {
+  color: var(--danger);
+}
+
+.nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 100;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.75rem;
+}
+
+.nav-item.active {
+  color: var(--brand-dark);
+}
+
+@media (min-width: 768px) {
+  .main-content {
+    max-width: 900px;
+  }
+}
