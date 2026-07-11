@@ -1,12 +1,18 @@
 import { ref } from 'vue'
-import { pushState, pullState } from '../services/supabase/sync.js'
+import { isSupabaseConfigured } from '../services/supabase/config.js'
 
 const status = ref('idle')
 const lastError = ref(null)
+const skipStoreSync = ref(false)
 
 export function useSync() {
   async function sync({ profiles = [], grades = {} } = {}) {
     lastError.value = null
+
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase is not configured; skipping sync.')
+      return { error: null }
+    }
 
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       status.value = 'offline'
@@ -16,6 +22,10 @@ export function useSync() {
     status.value = 'syncing'
 
     try {
+      const { pushState, pullState } = await import(
+        '../services/supabase/sync.js'
+      )
+
       const pushResult = await pushState({ profiles, grades })
       if (pushResult?.error) {
         status.value = 'error'
@@ -30,6 +40,14 @@ export function useSync() {
         return { error: pullResult.error }
       }
 
+      // Ongoing sync is primarily a backup mechanism. A full bidirectional
+      // merge is out of scope, so the pulled state is logged but not applied
+      // automatically.
+      console.log(
+        '[useSync] Pulled remote state (not applied on ongoing sync):',
+        pullResult
+      )
+
       status.value = 'idle'
       return {
         profiles: pullResult.profiles,
@@ -43,5 +61,5 @@ export function useSync() {
     }
   }
 
-  return { status, lastError, sync }
+  return { status, lastError, skipStoreSync, sync }
 }

@@ -20,10 +20,19 @@ import { useSync } from './composables/useSync.js'
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
-const { status: syncStatus, sync } = useSync()
+const { status: syncStatus, sync, skipStoreSync } = useSync()
+
+let syncTimeout = null
 
 function syncStores() {
-  sync({ profiles: profilesStore.profiles, grades: gradesStore.gradesByProfile })
+  if (skipStoreSync.value) {
+    return
+  }
+
+  clearTimeout(syncTimeout)
+  syncTimeout = setTimeout(() => {
+    sync({ profiles: profilesStore.profiles, grades: gradesStore.gradesByProfile })
+  }, 500)
 }
 
 function handleVisibilityChange() {
@@ -43,6 +52,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  clearTimeout(syncTimeout)
+
   unsubs.forEach((unsub) => unsub())
   unsubs.length = 0
 
