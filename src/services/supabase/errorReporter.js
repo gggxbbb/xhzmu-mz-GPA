@@ -68,11 +68,7 @@ export function installErrorHandlers(app) {
   if (app?.config) {
     const existingHandler = app.config.errorHandler
     app.config.errorHandler = (err, instance, info) => {
-      try {
-        reportError(err, 'vue')
-      } catch {
-        // ignore to avoid re-triggering error handlers
-      }
+      reportError(err, 'vue').catch(() => {})
       if (typeof existingHandler === 'function') {
         existingHandler(err, instance, info)
       }
@@ -82,11 +78,7 @@ export function installErrorHandlers(app) {
   if (typeof window !== 'undefined') {
     window.addEventListener('error', (event) => {
       const err = event.error ?? new Error(event.message ?? 'Unknown window error')
-      try {
-        reportError(err, 'window')
-      } catch {
-        // ignore to avoid re-triggering error handlers
-      }
+      reportError(err, 'window').catch(() => {})
     })
 
     window.addEventListener('unhandledrejection', (event) => {
@@ -95,11 +87,7 @@ export function installErrorHandlers(app) {
         reason instanceof Error
           ? reason
           : new Error(typeof reason === 'string' ? reason : 'Unhandled promise rejection')
-      try {
-        reportError(err, 'unhandledrejection')
-      } catch {
-        // ignore to avoid re-triggering error handlers
-      }
+      reportError(err, 'unhandledrejection').catch(() => {})
     })
   }
 }

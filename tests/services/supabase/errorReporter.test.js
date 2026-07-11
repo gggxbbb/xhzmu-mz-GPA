@@ -118,4 +118,119 @@ describe('Supabase error reporter', () => {
     expect(typeof firstHandler).toBe('function')
     expect(firstHandler).toBe(secondHandler)
   })
+
+  it('installs global window listeners only once', async () => {
+    const { installErrorHandlers } = await loadReporter()
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+
+    installErrorHandlers()
+    installErrorHandlers()
+
+    const errorCalls = addEventListenerSpy.mock.calls.filter(([type]) => type === 'error')
+    const rejectionCalls = addEventListenerSpy.mock.calls.filter(
+      ([type]) => type === 'unhandledrejection'
+    )
+
+    expect(errorCalls).toHaveLength(1)
+    expect(rejectionCalls).toHaveLength(1)
+  })
+
+  it('dispatches window error events to reportError', async () => {
+    const { installErrorHandlers } = await loadReporter()
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+
+    installErrorHandlers()
+    const handler = addEventListenerSpy.mock.calls.find(([type]) => type === 'error')[1]
+    const error = new Error('window error')
+
+    handler(new ErrorEvent('error', { error, message: error.message }))
+
+    await vi.waitFor(() => expect(mocks.insert).toHaveBeenCalledTimes(1))
+    expect(mocks.insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        message: 'window error',
+        component: 'window'
+      })
+    ])
+  })
+
+  it('dispatches unhandledrejection events to reportError', async () => {
+    const { installErrorHandlers } = await loadReporter()
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+
+    installErrorHandlers()
+    const handler = addEventListenerSpy.mock.calls.find(
+      ([type]) => type === 'unhandledrejection'
+    )[1]
+    const error = new Error('unhandled rejection')
+
+    handler({ reason: error })
+
+    await vi.waitFor(() => expect(mocks.insert).toHaveBeenCalledTimes(1))
+    expect(mocks.insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        message: 'unhandled rejection',
+        component: 'unhandledrejection'
+      })
+    ])
+  })
+
+  it('does not crash or loop when reportError rejects from a window handler', async () => {
+    const { installErrorHandlers } = await loadReporter()
+    mocks.getCurrentUserId.mockImplementation(() => {
+      throw new Error('auth failure')
+    })
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+
+    installErrorHandlers()
+    const handler = addEventListenerSpy.mock.calls.find(([type]) => type === 'error')[1]
+
+    expect(() =>
+      handler(new ErrorEvent('error', { error: new Error('window error') }))
+    ).not.toThrow()
+
+    await vi.waitFor(() => expect(mocks.getCurrentUserId).toHaveBeenCalled())
+    expect(mocks.insert).not.toHaveBeenCalled()
+  })
+
+  it('does not crash or loop when the Vue error handler rejects', async () => {
+    const { installErrorHandlers } = await loadReporter()
+    mocks.getCurrentUserId.mockImplementation(() => {
+      throw new Error('auth failure')
+    })
+    const app = { config: {} }
+
+    installErrorHandlers(app)
+
+    expect(() => app.config.errorHandler(new Error('vue error'), null, 'info')).not.toThrow()
+
+    await vi.waitFor(() => expect(mocks.getCurrentUserId).toHaveBeenCalled())
+    expect(mocks.insert).not.toHaveBeenCalled()
+  })
+
+  it('prunes stale entries after the rate-limit window passes', async () => {
+    vi.useFakeTimers()
+    const { reportError } = await loadReporter()
+
+    await reportError(new Error('stale'), 'Widget')
+    expect(mocks.insert).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    await reportError(new Error('stale'), 'Widget')
+    expect(mocks.insert).toHaveBeenCalledTimes(2)
+  })
+
+  it('logs to console.error when Supabase insert returns an error without throwing', async () => {
+    const { reportError } = await loadReporter()
+    const insertError = new Error('Supabase insert failed')
+    mocks.insert.mockResolvedValue({ error: insertError })
+
+    await expect(reportError(new Error('Boom'), 'Comp')).resolves.toBeUndefined()
+
+    expect(console.error).toHaveBeenCalledWith(
+      'Failed to report error to Supabase:',
+      insertError
+    )
+  })
 })
