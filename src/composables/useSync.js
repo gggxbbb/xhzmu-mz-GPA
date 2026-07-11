@@ -15,6 +15,7 @@ export function useSync() {
 
     if (!isSupabaseConfigured()) {
       console.warn('Supabase is not configured; skipping sync.')
+      status.value = 'offline'
       return { error: null }
     }
 

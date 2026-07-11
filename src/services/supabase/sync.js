@@ -36,15 +36,31 @@ function fromProfileRow(row) {
   }
 }
 
+function extractGrade(value) {
+  if (value !== null && typeof value === 'object' && !Array.isArray(value) && typeof value.score === 'number') {
+    return { score: value.score, updatedAt: value.updatedAt }
+  }
+  if (typeof value === 'number') {
+    return { score: value, updatedAt: Date.now() }
+  }
+  return null
+}
+
 function toGradeRows(userId, gradesByProfile) {
   const rows = []
   for (const [profileLocalId, courses] of Object.entries(gradesByProfile)) {
-    for (const [courseName, score] of Object.entries(courses)) {
+    for (const [courseName, value] of Object.entries(courses)) {
+      const grade = extractGrade(value)
+      if (!grade) continue
       rows.push({
         user_id: userId,
         profile_local_id: profileLocalId,
         course_name: courseName,
-        score
+        score: grade.score,
+        updated_at:
+          grade.updatedAt != null
+            ? new Date(grade.updatedAt).toISOString()
+            : new Date().toISOString()
       })
     }
   }
@@ -57,7 +73,10 @@ function fromGradeRows(rows) {
     if (!grades[row.profile_local_id]) {
       grades[row.profile_local_id] = {}
     }
-    grades[row.profile_local_id][row.course_name] = row.score
+    grades[row.profile_local_id][row.course_name] = {
+      score: row.score,
+      updatedAt: toTimestamp(row.updated_at)
+    }
   }
   return grades
 }
@@ -93,21 +112,58 @@ export function mergeGrades(
   localProfiles,
   remoteProfiles
 ) {
-  const localProfileMap = new Map(localProfiles.map((p) => [p.id, p]))
-  const remoteProfileMap = new Map(remoteProfiles.map((p) => [p.id, p]))
   const merged = {}
 
   for (const profile of mergedProfiles) {
-    const local = localProfileMap.get(profile.id)
-    const remote = remoteProfileMap.get(profile.id)
-    const localTs = local ? toTimestamp(local.updatedAt) : 0
-    const remoteTs = remote ? toTimestamp(remote.updatedAt) : 0
+    const localProfile = localProfiles.find((p) => p.id === profile.id)
+    const remoteProfile = remoteProfiles.find((p) => p.id === profile.id)
+    const localProfileTs = localProfile ? toTimestamp(localProfile.updatedAt) : 0
+    const remoteProfileTs = remoteProfile ? toTimestamp(remoteProfile.updatedAt) : 0
 
-    if (remoteTs >= localTs) {
+    // If the remote profile is newer, take all remote grades; if local is newer, take all local.
+    // When timestamps are equal, prefer remote (conservative strategy).
+    if (remoteProfileTs > localProfileTs) {
       merged[profile.id] = remoteGrades[profile.id] ?? {}
-    } else {
-      merged[profile.id] = localGrades[profile.id] ?? {}
+      continue
     }
+    if (remoteProfileTs < localProfileTs) {
+      merged[profile.id] = localGrades[profile.id] ?? {}
+      continue
+    }
+
+    // Profile-level timestamps are equal: merge per-course using per-grade updated_at.
+    const localCourses = localGrades[profile.id] ?? {}
+    const remoteCourses = remoteGrades[profile.id] ?? {}
+    const courseNames = new Set([
+      ...Object.keys(localCourses),
+      ...Object.keys(remoteCourses)
+    ])
+    const mergedCourses = {}
+
+    for (const courseName of courseNames) {
+      const localGrade = extractGrade(localCourses[courseName])
+      const remoteGrade = extractGrade(remoteCourses[courseName])
+
+      if (!localGrade) {
+        if (remoteGrade) mergedCourses[courseName] = remoteGrade
+        continue
+      }
+      if (!remoteGrade) {
+        mergedCourses[courseName] = localGrade
+        continue
+      }
+
+      const localTs = toTimestamp(localGrade.updatedAt)
+      const remoteTs = toTimestamp(remoteGrade.updatedAt)
+
+      if (remoteTs >= localTs) {
+        mergedCourses[courseName] = remoteGrade
+      } else {
+        mergedCourses[courseName] = localGrade
+      }
+    }
+
+    merged[profile.id] = mergedCourses
   }
 
   return merged
@@ -177,7 +233,7 @@ export async function pullState() {
 
   const { data: gradeRows, error: gradesError } = await supabase
     .from('grades')
-    .select('profile_local_id, course_name, score')
+    .select('profile_local_id, course_name, score, updated_at')
     .eq('user_id', userId)
 
   if (gradesError) {

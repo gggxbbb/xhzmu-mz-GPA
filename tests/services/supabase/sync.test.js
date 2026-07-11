@@ -84,12 +84,13 @@ describe('Supabase sync service', () => {
     )
     expect(mocks.grades.upsert).toHaveBeenCalledWith(
       [
-        {
+        expect.objectContaining({
           user_id: 'user-1',
           profile_local_id: 'p1',
           course_name: 'math',
-          score: 85
-        }
+          score: 85,
+          updated_at: expect.any(String)
+        })
       ],
       { onConflict: 'user_id,profile_local_id,course_name' }
     )
@@ -110,7 +111,7 @@ describe('Supabase sync service', () => {
     )
     expect(mocks.profiles.eq).toHaveBeenCalledWith('user_id', 'user-1')
     expect(mocks.grades.select).toHaveBeenCalledWith(
-      'profile_local_id, course_name, score'
+      'profile_local_id, course_name, score, updated_at'
     )
     expect(mocks.grades.eq).toHaveBeenCalledWith('user_id', 'user-1')
   })
@@ -179,7 +180,10 @@ describe('Supabase sync service', () => {
       }
     ])
     expect(result.grades).toEqual({
-      p1: { math: 90, english: 88 }
+      p1: {
+        math: { score: 90, updatedAt: 0 },
+        english: { score: 88, updatedAt: 0 }
+      }
     })
   })
 
@@ -238,12 +242,12 @@ describe('Supabase sync service', () => {
     const remoteProfiles = [{ id: 'p1', updatedAt: 2000 }]
     const mergedProfiles = mergeProfiles(localProfiles, remoteProfiles)
 
-    const localGrades = { p1: { math: 80 } }
-    const remoteGrades = { p1: { math: 95 } }
+    const localGrades = { p1: { math: { score: 80, updatedAt: 1000 } } }
+    const remoteGrades = { p1: { math: { score: 95, updatedAt: 2000 } } }
 
     expect(
       mergeGrades(localGrades, remoteGrades, mergedProfiles, localProfiles, remoteProfiles)
-    ).toEqual({ p1: { math: 95 } })
+    ).toEqual({ p1: { math: { score: 95, updatedAt: 2000 } } })
   })
 
   it('mergeGrades keeps local grades when local profile is newer', async () => {
@@ -253,12 +257,12 @@ describe('Supabase sync service', () => {
     const remoteProfiles = [{ id: 'p1', updatedAt: 1000 }]
     const mergedProfiles = mergeProfiles(localProfiles, remoteProfiles)
 
-    const localGrades = { p1: { math: 80 } }
-    const remoteGrades = { p1: { math: 95 } }
+    const localGrades = { p1: { math: { score: 80, updatedAt: 1000 } } }
+    const remoteGrades = { p1: { math: { score: 95, updatedAt: 2000 } } }
 
     expect(
       mergeGrades(localGrades, remoteGrades, mergedProfiles, localProfiles, remoteProfiles)
-    ).toEqual({ p1: { math: 80 } })
+    ).toEqual({ p1: { math: { score: 80, updatedAt: 1000 } } })
   })
 
   it('mergeGrades prefers remote grades when timestamps are equal', async () => {
@@ -268,12 +272,42 @@ describe('Supabase sync service', () => {
     const remoteProfiles = [{ id: 'p1', updatedAt: 2000 }]
     const mergedProfiles = mergeProfiles(localProfiles, remoteProfiles)
 
-    const localGrades = { p1: { math: 80 } }
-    const remoteGrades = { p1: { math: 95 } }
+    const localGrades = { p1: { math: { score: 80, updatedAt: 1000 } } }
+    const remoteGrades = { p1: { math: { score: 95, updatedAt: 2000 } } }
 
     expect(
       mergeGrades(localGrades, remoteGrades, mergedProfiles, localProfiles, remoteProfiles)
-    ).toEqual({ p1: { math: 95 } })
+    ).toEqual({ p1: { math: { score: 95, updatedAt: 2000 } } })
+  })
+
+  it('mergeGrades merges per-course when profile timestamps are equal', async () => {
+    const { mergeProfiles, mergeGrades } = await loadSync()
+
+    const localProfiles = [{ id: 'p1', updatedAt: 2000 }]
+    const remoteProfiles = [{ id: 'p1', updatedAt: 2000 }]
+    const mergedProfiles = mergeProfiles(localProfiles, remoteProfiles)
+
+    const localGrades = {
+      p1: {
+        math: { score: 80, updatedAt: 3000 },
+        english: { score: 70, updatedAt: 1000 }
+      }
+    }
+    const remoteGrades = {
+      p1: {
+        math: { score: 95, updatedAt: 2000 },
+        english: { score: 75, updatedAt: 3000 }
+      }
+    }
+
+    expect(
+      mergeGrades(localGrades, remoteGrades, mergedProfiles, localProfiles, remoteProfiles)
+    ).toEqual({
+      p1: {
+        math: { score: 80, updatedAt: 3000 },
+        english: { score: 75, updatedAt: 3000 }
+      }
+    })
   })
 
   it('mergeGrades clears local grades when remote profile is newer and has no grades', async () => {
@@ -283,7 +317,7 @@ describe('Supabase sync service', () => {
     const remoteProfiles = [{ id: 'p1', updatedAt: 2000 }]
     const mergedProfiles = mergeProfiles(localProfiles, remoteProfiles)
 
-    const localGrades = { p1: { math: 80 } }
+    const localGrades = { p1: { math: { score: 80, updatedAt: 1000 } } }
     const remoteGrades = {}
 
     expect(

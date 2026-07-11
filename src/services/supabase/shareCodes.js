@@ -1,6 +1,3 @@
-import { supabase } from './client.js'
-import { getCurrentUserId } from './auth.js'
-
 const SHARE_CODE_LENGTH = 6
 const ALPHANUMERIC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
 const MAX_RETRIES = 5
@@ -34,7 +31,17 @@ function computeExpirationDate(ttlDays) {
   return expiresAt.toISOString()
 }
 
+async function loadSupabase() {
+  const [{ supabase }, { getCurrentUserId }] = await Promise.all([
+    import('./client.js'),
+    import('./auth.js')
+  ])
+  return { supabase, getCurrentUserId }
+}
+
 export async function createShareCode(payload, ttlDays = 7) {
+  const { supabase, getCurrentUserId } = await loadSupabase()
+
   if (!supabase) {
     throw new Error('Cannot create share code: Supabase client is not initialized')
   }
@@ -83,6 +90,8 @@ export async function createShareCode(payload, ttlDays = 7) {
 }
 
 export async function getShareCodePayload(code) {
+  const { supabase } = await loadSupabase()
+
   if (!supabase) {
     throw new Error('Cannot retrieve share code: Supabase client is not initialized')
   }

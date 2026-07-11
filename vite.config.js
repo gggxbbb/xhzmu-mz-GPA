@@ -11,12 +11,7 @@ export default defineConfig({
       injectRegister: 'auto',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/analysis\.gxb\.icu\/.*/,
-            handler: 'NetworkOnly'
-          }
-        ]
+        runtimeCaching: []
       }
     })
   ]

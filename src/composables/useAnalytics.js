@@ -1,48 +1,72 @@
-import { track } from '../services/supabase/analytics.js'
+let trackFn = null
+let trackPromise = null
+
+async function loadTracker() {
+  if (trackFn) return trackFn
+  if (!trackPromise) {
+    trackPromise = import('../services/supabase/analytics.js')
+      .then((mod) => {
+        trackFn = mod.track
+        return trackFn
+      })
+      .catch((err) => {
+        console.error('Failed to load analytics tracker:', err)
+        trackPromise = null
+        throw err
+      })
+  }
+  return trackPromise
+}
+
+function enqueue(name, properties = {}) {
+  loadTracker()
+    .then((track) => track(name, properties))
+    .catch(() => {})
+}
 
 export function useAnalytics() {
-  function trackPageView(path, name) {
-    track('page_view', { path, name })
+  function trackPageView(path, routeName) {
+    enqueue('page_view', { path, routeName })
   }
 
   function trackGradeEntered(courseCount) {
-    track('grade_entered', { courseCount })
+    enqueue('grade_entered', { courseCount })
   }
 
   function trackProfileSwitched(profileCount) {
-    track('profile_switched', { profileCount })
+    enqueue('profile_switched', { profileCount })
   }
 
   function trackProfileCreated() {
-    track('profile_created')
+    enqueue('profile_created')
   }
 
   function trackProfileImported(format) {
-    track('profile_imported', { format })
+    enqueue('profile_imported', { format })
   }
 
   function trackProfileExported(format) {
-    track('profile_exported', { format })
+    enqueue('profile_exported', { format })
   }
 
   function trackShareCodeGenerated() {
-    track('share_code_generated')
+    enqueue('share_code_generated')
   }
 
   function trackShareCodeRecovered() {
-    track('share_code_recovered')
+    enqueue('share_code_recovered')
   }
 
   function trackThemeChanged(theme) {
-    track('theme_changed', { theme })
+    enqueue('theme_changed', { theme })
   }
 
   function trackSyncCompleted(direction) {
-    track('sync_completed', { direction })
+    enqueue('sync_completed', { direction })
   }
 
   function trackSyncFailed(errorCode) {
-    track('sync_failed', { errorCode })
+    enqueue('sync_failed', { errorCode })
   }
 
   return {

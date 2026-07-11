@@ -8,7 +8,7 @@ const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
 const PHONE_RE = /(?:\+?86)?1[3-9]\d{9}/g
 const UUID_RE = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g
 const TOKEN_RE = /\b(eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*)\b/g
-const SHARE_CODE_RE = /\b([A-Z0-9]{8,16})\b/g
+const SHARE_CODE_RE = /(share[_-]?code|code[_-]?input|code)\s*[:=]\s*([A-Za-z0-9]{6})/gi
 
 const rateLimitMap = new Map()
 let errorHandlersInstalled = false
@@ -39,7 +39,7 @@ function sanitize(text) {
     .replace(PHONE_RE, '[phone]')
     .replace(UUID_RE, '[uuid]')
     .replace(TOKEN_RE, '[token]')
-    .replace(SHARE_CODE_RE, '[share-code]')
+    .replace(SHARE_CODE_RE, '$1=[share-code]')
     .replace(/\buser[_-]?id\s*[:=]\s*[^\s&]+/gi, '[user-id]')
     .replace(/\bid\s*[:=]\s*[^\s&]+/gi, '[id]')
     .replace(/\baccess[_-]?token\s*[:=]\s*[^\s&]+/gi, '[access-token]')

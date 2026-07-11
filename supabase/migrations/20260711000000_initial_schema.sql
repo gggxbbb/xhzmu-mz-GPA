@@ -4,11 +4,11 @@
 --       instead of supabase.from('share_codes').select() because direct SELECT is denied.
 
 -- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Profiles table: stores user profile and class configuration
 CREATE TABLE IF NOT EXISTS public.profiles (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     local_id text NOT NULL,
     name text NOT NULL,
@@ -24,7 +24,7 @@ COMMENT ON TABLE public.profiles IS 'User profiles and GPA class configurations.
 
 -- Grades table: stores course grades linked to a profile
 CREATE TABLE IF NOT EXISTS public.grades (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL,
     profile_local_id text NOT NULL,
     course_name text NOT NULL,
@@ -51,7 +51,7 @@ COMMENT ON TABLE public.share_codes IS 'Short-lived shareable codes and payloads
 
 -- Events table: analytics/events logged by authenticated users
 CREATE TABLE IF NOT EXISTS public.events (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
     name text NOT NULL,
     properties jsonb NOT NULL DEFAULT '{}'::jsonb,
@@ -62,7 +62,7 @@ COMMENT ON TABLE public.events IS 'User-triggered analytics events.';
 
 -- Errors table: client-side error reports
 CREATE TABLE IF NOT EXISTS public.errors (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
     message text NOT NULL,
     stack text,
@@ -79,14 +79,18 @@ CREATE INDEX IF NOT EXISTS idx_share_codes_user_id ON public.share_codes(user_id
 CREATE INDEX IF NOT EXISTS idx_events_user_id ON public.events(user_id);
 CREATE INDEX IF NOT EXISTS idx_errors_user_id ON public.errors(user_id);
 
--- Helper function to auto-update updated_at columns
+-- Helper function to auto-update updated_at columns.
+-- Only sets updated_at when the client did not provide a new value,
+-- preserving client-supplied timestamps for conflict resolution.
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = public
 AS $$
 BEGIN
-    NEW.updated_at = now();
+    IF NEW.updated_at IS NULL OR NEW.updated_at = OLD.updated_at THEN
+        NEW.updated_at = now();
+    END IF;
     RETURN NEW;
 END;
 $$;
