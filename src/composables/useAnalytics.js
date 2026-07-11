@@ -1,52 +1,51 @@
 import { track } from '../services/supabase/analytics.js'
 
 export function useAnalytics() {
-  function trackPageView(properties = {}) {
-    track('page_view', properties)
+  function trackPageView(path, name) {
+    track('page_view', { path, name })
   }
 
-  function trackGradeEntered(properties = {}) {
-    track('grade_entered', properties)
+  function trackGradeEntered(courseCount) {
+    track('grade_entered', { courseCount })
   }
 
-  function trackProfileSwitched(properties = {}) {
-    track('profile_switched', properties)
+  function trackProfileSwitched(profileCount) {
+    track('profile_switched', { profileCount })
   }
 
-  function trackProfileCreated(properties = {}) {
-    track('profile_created', properties)
+  function trackProfileCreated() {
+    track('profile_created')
   }
 
-  function trackProfileImported(properties = {}) {
-    track('profile_imported', properties)
+  function trackProfileImported(format) {
+    track('profile_imported', { format })
   }
 
-  function trackProfileExported(properties = {}) {
-    track('profile_exported', properties)
+  function trackProfileExported(format) {
+    track('profile_exported', { format })
   }
 
-  function trackShareCodeGenerated(properties = {}) {
-    track('share_code_generated', properties)
+  function trackShareCodeGenerated() {
+    track('share_code_generated')
   }
 
-  function trackShareCodeRecovered(properties = {}) {
-    track('share_code_recovered', properties)
+  function trackShareCodeRecovered() {
+    track('share_code_recovered')
   }
 
-  function trackThemeChanged(properties = {}) {
-    track('theme_changed', properties)
+  function trackThemeChanged(theme) {
+    track('theme_changed', { theme })
   }
 
-  function trackSyncCompleted(properties = {}) {
-    track('sync_completed', properties)
+  function trackSyncCompleted(direction) {
+    track('sync_completed', { direction })
   }
 
-  function trackSyncFailed(properties = {}) {
-    track('sync_failed', properties)
+  function trackSyncFailed(errorCode) {
+    track('sync_failed', { errorCode })
   }
 
   return {
-    track,
     trackPageView,
     trackGradeEntered,
     trackProfileSwitched,
