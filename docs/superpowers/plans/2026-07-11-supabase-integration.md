@@ -1071,15 +1071,17 @@ Create `tests/services/supabase/shareCodes.test.js`:
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const fromMock = vi.fn()
+const rpcMock = vi.fn()
 
 vi.mock('../../../src/services/supabase/client.js', () => ({
-  supabase: { from: (table) => fromMock(table) }
+  supabase: { from: (table) => fromMock(table), rpc: rpcMock }
 }))
 
 vi.mock('../../../src/services/supabase/auth.js', () => ({
   getCurrentUserId: () => 'u1'
 }))
 
+import { supabase } from '../../../src/services/supabase/client.js'
 import { createShareCode, getShareCodePayload } from '../../../src/services/supabase/shareCodes.js'
 
 describe('shareCodes', () => {
@@ -1097,15 +1099,12 @@ describe('shareCodes', () => {
     expect(insertMock).toHaveBeenCalled()
   })
 
-  it('retrieves payload by code', async () => {
+  it('retrieves payload by code via RPC', async () => {
     const payload = { profiles: [{ id: 'p1' }] }
-    fromMock.mockReturnValue({
-      select: () => ({
-        eq: () => Promise.resolve({ data: [{ payload, expires_at: null }], error: null })
-      })
-    })
+    rpcMock.mockResolvedValue({ data: payload, error: null })
     const result = await getShareCodePayload('ABC123')
     expect(result).toEqual(payload)
+    expect(rpcMock).toHaveBeenCalledWith('get_share_code', { code_input: 'ABC123' })
   })
 })
 ```
@@ -1159,20 +1158,12 @@ export async function createShareCode(payload, ttlDays = DEFAULT_TTL_DAYS) {
 }
 
 export async function getShareCodePayload(code) {
-  const { data, error } = await supabase
-    .from('share_codes')
-    .select('payload, expires_at')
-    .eq('code', code)
-    .single()
+  const { data, error } = await supabase.rpc('get_share_code', { code_input: code })
 
   if (error) throw error
-  if (!data) throw new Error('Share code not found')
+  if (!data) throw new Error('Share code not found or expired')
 
-  if (data.expires_at && new Date(data.expires_at) < new Date()) {
-    throw new Error('Share code expired')
-  }
-
-  return data.payload
+  return data
 }
 ```
 

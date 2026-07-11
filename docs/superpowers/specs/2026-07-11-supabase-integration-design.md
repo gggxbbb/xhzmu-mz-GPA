@@ -240,13 +240,14 @@ create table errors (
 ### 7.2 恢复
 
 1. 用户在目标设备输入短码。
-2. 查询 `share_codes` 表，校验未过期。
+2. 通过 RPC 调用 `get_share_code(code_input)` 获取 `payload`，函数内部校验未过期。
 3. 将 `payload` 合并到当前匿名用户的 localStorage/Pinia。
 4. 合并完成后触发一次 `sync.push()`，把数据同步到该用户的云端。
 
 ### 7.3 安全
 
-- `share_codes` 允许任何人通过 `code` 查询（anon + authenticated 可读）。
+- `share_codes` 的直接 `SELECT` 被拒绝，防止枚举。
+- 任何人可通过 RPC `get_share_code(code_input)` 读取单个已知短码的数据。
 - 只有所有者能创建或删除自己的分享码。
 - 分享码含完整数据快照，用户应谨慎分享。
 
@@ -308,17 +309,41 @@ with check (auth.uid() = user_id);
 
 ### 9.2 share_codes RLS
 
+直接 `SELECT` 被拒绝，防止枚举所有分享码：
+
 ```sql
-create policy "Anyone can read by code"
+create policy "Deny direct select on share_codes"
 on share_codes for select
 to anon, authenticated
-using (true);
+using (false);
 
 create policy "Owners can manage their codes"
 on share_codes for all
 to authenticated
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
+```
+
+读取通过安全定义函数（RPC）：
+
+```sql
+CREATE OR REPLACE FUNCTION get_share_code(code_input text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN (
+    SELECT payload
+    FROM share_codes
+    WHERE code = code_input
+    AND (expires_at IS NULL OR expires_at > now())
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_share_code(text) TO anon, authenticated;
 ```
 
 ### 9.3 API Key 管理
