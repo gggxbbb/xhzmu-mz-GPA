@@ -3,12 +3,23 @@ import { getCurrentUserId } from './auth.js'
 
 const MAX_QUEUE_SIZE = 10
 const FLUSH_DELAY_MS = 5000
+const MAX_RETRIES = 3
 const SENSITIVE_KEYS = new Set([
   'courseName',
   'score',
   'profileName',
   'courseNames',
-  'scores'
+  'scores',
+  'email',
+  'phone',
+  'name',
+  'password',
+  'token',
+  'userId',
+  'id',
+  'address',
+  'note',
+  'notes'
 ])
 
 let queue = []
@@ -35,7 +46,10 @@ function filterProperties(value) {
 function startFlushTimer() {
   if (flushTimer === null) {
     flushTimer = setTimeout(() => {
-      flush()
+      flushTimer = null
+      flush().catch((err) => {
+        console.error('Unexpected error in analytics flush timer:', err)
+      })
     }, FLUSH_DELAY_MS)
   }
 }
@@ -50,14 +64,17 @@ function clearFlushTimer() {
 export function track(name, properties = {}) {
   const event = {
     name,
-    properties: filterProperties(properties)
+    properties: filterProperties(properties),
+    retryCount: 0
   }
 
   queue.push(event)
 
   if (queue.length >= MAX_QUEUE_SIZE) {
     clearFlushTimer()
-    flush()
+    flush().catch((err) => {
+      console.error('Unexpected error in analytics flush:', err)
+    })
   } else {
     startFlushTimer()
   }
@@ -89,9 +106,29 @@ export async function flush() {
     const { error } = await supabase.from('events').insert(rows)
     if (error) {
       console.error('Failed to flush analytics events:', error)
+      requeueEvents(eventsToFlush)
     }
   } catch (err) {
     console.error('Unexpected error flushing analytics events:', err)
+    requeueEvents(eventsToFlush)
+  }
+}
+
+function requeueEvents(events) {
+  const eventsToRetry = []
+
+  for (const event of events) {
+    const retryCount = event.retryCount + 1
+    if (retryCount > MAX_RETRIES) {
+      console.error('Dropping analytics event after max retries:', event.name)
+      continue
+    }
+    eventsToRetry.push({ ...event, retryCount })
+  }
+
+  if (eventsToRetry.length > 0) {
+    queue.unshift(...eventsToRetry)
+    startFlushTimer()
   }
 }
 

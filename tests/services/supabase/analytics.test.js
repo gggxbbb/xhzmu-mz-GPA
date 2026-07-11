@@ -1,37 +1,35 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { supabase, mockInsert } from '../../../src/services/supabase/client.js'
-import { getCurrentUserId, setUserId } from '../../../src/services/supabase/auth.js'
 import { track, flush, clearQueue } from '../../../src/services/supabase/analytics.js'
+import { supabase } from '../../../src/services/supabase/client.js'
 
-vi.mock('../../../src/services/supabase/client.js', () => {
-  const mockInsert = vi.fn(() => Promise.resolve({ error: null }))
+const mocks = {
+  insert: vi.fn(() => Promise.resolve({ error: null }))
+}
 
-  return {
-    mockInsert,
-    supabase: {
-      from: vi.fn(() => ({
-        insert: mockInsert
-      }))
-    }
+const authState = {
+  currentUserId: null
+}
+
+vi.mock('../../../src/services/supabase/client.js', () => ({
+  supabase: {
+    from: vi.fn(() => ({ insert: mocks.insert }))
   }
-})
+}))
 
-vi.mock('../../../src/services/supabase/auth.js', () => {
-  let currentUserId = null
+vi.mock('../../../src/services/supabase/auth.js', () => ({
+  getCurrentUserId: vi.fn(() => authState.currentUserId)
+}))
 
-  return {
-    getCurrentUserId: vi.fn(() => currentUserId),
-    setUserId: (id) => {
-      currentUserId = id
-    }
-  }
-})
+function setUserId(id) {
+  authState.currentUserId = id
+}
 
 describe('analytics service', () => {
   beforeEach(() => {
     clearQueue()
     setUserId('user-1')
-    mockInsert.mockClear()
+    mocks.insert.mockClear()
+    mocks.insert.mockResolvedValue({ error: null })
     supabase.from.mockClear()
   })
 
@@ -44,12 +42,12 @@ describe('analytics service', () => {
 
     track('button_click', { target: 'save-profile' })
 
-    expect(mockInsert).not.toHaveBeenCalled()
+    expect(mocks.insert).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(5000)
 
     expect(supabase.from).toHaveBeenCalledWith('events')
-    expect(mockInsert).toHaveBeenCalledWith([
+    expect(mocks.insert).toHaveBeenCalledWith([
       {
         user_id: 'user-1',
         name: 'button_click',
@@ -65,12 +63,22 @@ describe('analytics service', () => {
       profileName: 'Alice',
       courseNames: ['Math', 'Science'],
       scores: [95, 88],
+      email: 'alice@example.com',
+      phone: '555-1234',
+      name: 'Alice Smith',
+      password: 'secret',
+      token: 'abc123',
+      userId: 'user-123',
+      id: 'record-1',
+      address: '123 Main St',
+      note: 'private note',
+      notes: ['note 1', 'note 2'],
       source: 'manual'
     })
 
     await flush()
 
-    expect(mockInsert).toHaveBeenCalledWith([
+    expect(mocks.insert).toHaveBeenCalledWith([
       {
         user_id: 'user-1',
         name: 'grade_added',
@@ -86,13 +94,13 @@ describe('analytics service', () => {
 
     await flush()
 
-    expect(mockInsert).not.toHaveBeenCalled()
+    expect(mocks.insert).not.toHaveBeenCalled()
 
     setUserId('user-2')
 
     await flush()
 
-    expect(mockInsert).toHaveBeenCalledWith([
+    expect(mocks.insert).toHaveBeenCalledWith([
       {
         user_id: 'user-2',
         name: 'page_view',
@@ -106,8 +114,8 @@ describe('analytics service', () => {
       track('interaction', { index: i })
     }
 
-    expect(mockInsert).toHaveBeenCalledTimes(1)
-    expect(mockInsert).toHaveBeenCalledWith(
+    expect(mocks.insert).toHaveBeenCalledTimes(1)
+    expect(mocks.insert).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
           user_id: 'user-1',
@@ -116,5 +124,39 @@ describe('analytics service', () => {
         })
       ])
     )
+  })
+
+  it('re-queues events when insert returns an error', async () => {
+    mocks.insert.mockResolvedValue({ error: new Error('DB down') })
+
+    track('click', { target: 'button' })
+
+    await flush()
+    await flush()
+    await flush()
+    await flush()
+
+    expect(mocks.insert).toHaveBeenCalledTimes(4)
+
+    mocks.insert.mockClear()
+    await flush()
+    expect(mocks.insert).not.toHaveBeenCalled()
+  })
+
+  it('re-queues events when insert throws', async () => {
+    mocks.insert.mockRejectedValue(new Error('Network error'))
+
+    track('click', { target: 'button' })
+
+    await flush()
+    await flush()
+    await flush()
+    await flush()
+
+    expect(mocks.insert).toHaveBeenCalledTimes(4)
+
+    mocks.insert.mockClear()
+    await flush()
+    expect(mocks.insert).not.toHaveBeenCalled()
   })
 })
