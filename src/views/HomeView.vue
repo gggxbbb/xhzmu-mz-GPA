@@ -34,6 +34,7 @@ import { useGradesStore } from '../stores/grades'
 import { useUIStore } from '../stores/ui'
 import { useGPA } from '../composables/useGPA'
 import { useAnalytics } from '../composables/useAnalytics'
+import { sortClasses } from '../utils/semesterSort'
 import GpaCard from '../components/GpaCard.vue'
 import StatChips from '../components/StatChips.vue'
 import SearchBar from '../components/SearchBar.vue'
@@ -54,7 +55,7 @@ const gpa = useGPA(currentProfile, currentGrades)
 const filteredClasses = computed(() => {
   const query = uiStore.searchQuery.trim().toLowerCase()
   const result = {}
-  for (const semester of Object.keys(currentProfile.value.classes)) {
+  for (const semester of Object.keys(sortClasses(currentProfile.value.classes))) {
     const courses = currentProfile.value.classes[semester]
     const filtered = query
       ? courses.filter(c => c.name.toLowerCase().includes(query))
