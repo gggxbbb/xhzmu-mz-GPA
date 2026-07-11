@@ -17,7 +17,7 @@ const app = createApp(App)
 app.use(pinia)
 app.use(router)
 
-const { status, lastError, skipStoreSync } = useSync()
+const { status, lastError } = useSync()
 
 function initializeState({ flushAnalytics } = {}) {
   const appStore = useAppStore()
@@ -90,27 +90,24 @@ async function initializeSupabase() {
     const profilesStore = useProfilesStore()
     const gradesStore = useGradesStore()
 
+    const pullResult = await pullState()
+    if (pullResult?.error) {
+      throw pullResult.error
+    }
+
+    // Pull first on initial sync so a fresh device loads an existing remote
+    // backup before pushing its local state, preserving remote data.
+    if (pullResult.profiles && pullResult.profiles.length > 0) {
+      profilesStore.load(pullResult.profiles)
+      gradesStore.load(pullResult.grades || {})
+    }
+
     const pushResult = await pushState({
       profiles: profilesStore.profiles,
       grades: gradesStore.gradesByProfile
     })
     if (pushResult?.error) {
       throw pushResult.error
-    }
-
-    const pullResult = await pullState()
-    if (pullResult?.error) {
-      throw pullResult.error
-    }
-
-    // Temporarily suppress the store subscriptions in App.vue so loading the
-    // pulled state does not immediately trigger another sync.
-    skipStoreSync.value = true
-    try {
-      profilesStore.load(pullResult.profiles)
-      gradesStore.load(pullResult.grades)
-    } finally {
-      skipStoreSync.value = false
     }
 
     status.value = 'idle'

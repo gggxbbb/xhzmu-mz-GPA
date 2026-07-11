@@ -20,15 +20,11 @@ import { useSync } from './composables/useSync.js'
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
-const { status: syncStatus, sync, skipStoreSync } = useSync()
+const { status: syncStatus, sync } = useSync()
 
 let syncTimeout = null
 
 function syncStores() {
-  if (skipStoreSync.value) {
-    return
-  }
-
   clearTimeout(syncTimeout)
   syncTimeout = setTimeout(() => {
     sync({ profiles: profilesStore.profiles, grades: gradesStore.gradesByProfile })

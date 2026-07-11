@@ -3,7 +3,6 @@ import { isSupabaseConfigured } from '../services/supabase/config.js'
 
 const status = ref('idle')
 const lastError = ref(null)
-const skipStoreSync = ref(false)
 
 export function useSync() {
   async function sync({ profiles = [], grades = {} } = {}) {
@@ -61,5 +60,5 @@ export function useSync() {
     }
   }
 
-  return { status, lastError, skipStoreSync, sync }
+  return { status, lastError, sync }
 }
