@@ -59,6 +59,8 @@ const unwatchStatus = watch(syncStatus, (newStatus) => {
       pendingSync = false
       syncStores()
     }
+  } else if (newStatus === 'error') {
+    localSyncInProgress = false
   }
 })
 
