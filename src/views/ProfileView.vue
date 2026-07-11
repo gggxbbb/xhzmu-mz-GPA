@@ -54,6 +54,7 @@ import { useAppStore } from '../stores/app'
 import { useProfilesStore } from '../stores/profiles'
 import { useGradesStore } from '../stores/grades'
 import { useSync } from '../composables/useSync'
+import { useAnalytics } from '../composables/useAnalytics'
 import ProfileSwitcher from '../components/ProfileSwitcher.vue'
 import CourseConfigEditor from '../components/CourseConfigEditor.vue'
 import ImportExportCard from '../components/ImportExportCard.vue'
@@ -66,6 +67,7 @@ const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
 const { sync, status, lastError } = useSync()
+const { trackShareCodeRecovered } = useAnalytics()
 
 const showShare = ref(false)
 const showRecover = ref(false)
@@ -97,6 +99,7 @@ function handleRecovered(payload) {
     appStore.setCurrentProfileId(firstProfileId)
   }
 
+  trackShareCodeRecovered()
   showRecover.value = false
 }
 </script>

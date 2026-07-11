@@ -25,10 +25,14 @@ const { status: syncStatus, sync } = useSync()
 let syncTimeout = null
 
 function syncStores() {
+  if (syncStatus.value === 'syncing') return
   clearTimeout(syncTimeout)
   syncTimeout = setTimeout(() => {
-    sync({ profiles: profilesStore.profiles, grades: gradesStore.gradesByProfile })
-  }, 500)
+    sync({
+      profiles: profilesStore.profiles,
+      grades: gradesStore.gradesByProfile.value
+    })
+  }, 3000)
 }
 
 function handleVisibilityChange() {

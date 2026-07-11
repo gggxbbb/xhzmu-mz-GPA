@@ -18,7 +18,8 @@ export const useProfilesStore = defineStore('profiles', () => {
       id: 'default',
       name: DEFAULT_PROFILE_NAME,
       targetGPA: DEFAULT_TARGET_GPA,
-      classes: DEFAULT_CLASSES
+      classes: DEFAULT_CLASSES,
+      updatedAt: Date.now()
     }
   }
 
@@ -27,7 +28,8 @@ export const useProfilesStore = defineStore('profiles', () => {
       id: createId(),
       name: name || '新档案',
       targetGPA: isNaN(parseFloat(targetGPA)) ? DEFAULT_TARGET_GPA : parseFloat(targetGPA),
-      classes: classes || {}
+      classes: classes || {},
+      updatedAt: Date.now()
     }
     profiles.value.push(profile)
     return profile.id
@@ -42,6 +44,14 @@ export const useProfilesStore = defineStore('profiles', () => {
       if (!isNaN(parsed)) p.targetGPA = parsed
     }
     if (patch.classes != null) p.classes = patch.classes
+    p.updatedAt = Date.now()
+  }
+
+  function touchProfile(id) {
+    const p = profiles.value.find(x => x.id === id)
+    if (p) {
+      p.updatedAt = Date.now()
+    }
   }
 
   function removeProfile(id) {
@@ -55,7 +65,10 @@ export const useProfilesStore = defineStore('profiles', () => {
 
   function load(data) {
     if (Array.isArray(data) && data.length > 0) {
-      profiles.value = data
+      profiles.value = data.map((p) => ({
+        ...p,
+        updatedAt: p.updatedAt ?? Date.now()
+      }))
     } else {
       resetToDefault()
     }
@@ -70,6 +83,7 @@ export const useProfilesStore = defineStore('profiles', () => {
     getProfile,
     addProfile,
     updateProfile,
+    touchProfile,
     removeProfile,
     resetToDefault,
     load,

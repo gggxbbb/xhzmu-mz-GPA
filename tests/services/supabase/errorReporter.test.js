@@ -233,4 +233,27 @@ describe('Supabase error reporter', () => {
       insertError
     )
   })
+
+  it('masks PII in message, stack, and url before reporting', async () => {
+    const { reportError } = await loadReporter()
+    const error = new Error('Contact user@example.com or 13800138000 about score 85')
+    error.stack = 'Error: Contact user@example.com\n    at foo:1:1'
+
+    vi.stubGlobal('window', {
+      ...window,
+      location: { href: 'http://app.test/?email=user@example.com&score=92' }
+    })
+
+    await reportError(error, 'PIIComponent')
+
+    expect(mocks.insert).toHaveBeenCalledWith([
+      expect.objectContaining({
+        message: 'Contact [email] or [phone] about score [score]',
+        stack: 'Error: Contact [email]\n    at foo:1:1',
+        url: 'http://app.test/?email=[email]&score=[score]'
+      })
+    ])
+
+    vi.unstubAllGlobals()
+  })
 })

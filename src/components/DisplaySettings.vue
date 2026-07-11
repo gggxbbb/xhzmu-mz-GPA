@@ -17,7 +17,14 @@
 </template>
 
 <script setup>
+import { watch } from 'vue'
 import { useAppStore } from '../stores/app'
+import { useAnalytics } from '../composables/useAnalytics'
 
 const appStore = useAppStore()
+const { trackThemeChanged } = useAnalytics()
+
+watch(() => appStore.theme, (theme) => {
+  trackThemeChanged(theme)
+})
 </script>

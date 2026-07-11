@@ -9,6 +9,7 @@ import { useAppStore } from './stores/app'
 import { useProfilesStore } from './stores/profiles'
 import { useGradesStore } from './stores/grades'
 import { useSync } from './composables/useSync.js'
+import { useAnalytics } from './composables/useAnalytics.js'
 import { isSupabaseConfigured } from './services/supabase/config.js'
 
 const pinia = createPinia()
@@ -77,7 +78,10 @@ async function initializeSupabase() {
   lastError.value = null
 
   try {
-    const [{ initAnonymousAuth }, { pushState, pullState }] = await Promise.all([
+    const [
+      { initAnonymousAuth },
+      { pushState, pullState, mergeProfiles, mergeGrades }
+    ] = await Promise.all([
       import('./services/supabase/auth.js'),
       import('./services/supabase/sync.js')
     ])
@@ -87,34 +91,56 @@ async function initializeSupabase() {
       throw authError || new Error('Supabase anonymous auth failed')
     }
 
+    const appStore = useAppStore()
     const profilesStore = useProfilesStore()
     const gradesStore = useGradesStore()
+    const { trackSyncCompleted, trackSyncFailed } = useAnalytics()
+
+    // Push local state first, then pull remote state and merge newer records
+    // back into the local stores using last-write-wins on updatedAt.
+    const pushResult = await pushState({
+      profiles: profilesStore.profiles,
+      grades: gradesStore.gradesByProfile.value
+    })
+    if (pushResult?.error) {
+      throw pushResult.error
+    }
 
     const pullResult = await pullState()
     if (pullResult?.error) {
       throw pullResult.error
     }
 
-    // Pull first on initial sync so a fresh device loads an existing remote
-    // backup before pushing its local state, preserving remote data.
-    if (pullResult.profiles && pullResult.profiles.length > 0) {
-      profilesStore.load(pullResult.profiles)
-      gradesStore.load(pullResult.grades || {})
-    }
+    const mergedProfiles = mergeProfiles(
+      profilesStore.profiles,
+      pullResult.profiles
+    )
+    const mergedGrades = mergeGrades(
+      gradesStore.gradesByProfile.value,
+      pullResult.grades,
+      mergedProfiles,
+      profilesStore.profiles
+    )
 
-    const pushResult = await pushState({
-      profiles: profilesStore.profiles,
-      grades: gradesStore.gradesByProfile
-    })
-    if (pushResult?.error) {
-      throw pushResult.error
+    profilesStore.load(mergedProfiles)
+    gradesStore.load(mergedGrades)
+
+    const currentId = appStore.currentProfileId
+    if (!mergedProfiles.some((p) => p.id === currentId)) {
+      appStore.setCurrentProfileId(mergedProfiles[0]?.id || 'default')
     }
 
     status.value = 'idle'
-    console.log('[Supabase] Initialized and synced remote state:', pullResult)
+    trackSyncCompleted('push_pull')
+    console.log('[Supabase] Initialized and synced remote state:', {
+      profiles: mergedProfiles,
+      grades: mergedGrades
+    })
   } catch (err) {
     status.value = 'error'
     lastError.value = err
+    const { trackSyncFailed } = useAnalytics()
+    trackSyncFailed(String(err?.message ?? err))
     console.error('Failed to initialize Supabase:', err)
   }
 }

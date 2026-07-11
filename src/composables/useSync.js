@@ -1,8 +1,13 @@
 import { ref } from 'vue'
 import { isSupabaseConfigured } from '../services/supabase/config.js'
+import { useProfilesStore } from '../stores/profiles.js'
+import { useGradesStore } from '../stores/grades.js'
+import { useAnalytics } from './useAnalytics.js'
 
 const status = ref('idle')
 const lastError = ref(null)
+
+const { trackSyncCompleted, trackSyncFailed } = useAnalytics()
 
 export function useSync() {
   async function sync({ profiles = [], grades = {} } = {}) {
@@ -21,41 +26,49 @@ export function useSync() {
     status.value = 'syncing'
 
     try {
-      const { pushState, pullState } = await import(
-        '../services/supabase/sync.js'
-      )
+      const {
+        pushState,
+        pullState,
+        mergeProfiles,
+        mergeGrades
+      } = await import('../services/supabase/sync.js')
 
       const pushResult = await pushState({ profiles, grades })
       if (pushResult?.error) {
-        status.value = 'error'
-        lastError.value = pushResult.error
-        return { error: pushResult.error }
+        throw pushResult.error
       }
 
       const pullResult = await pullState()
       if (pullResult?.error) {
-        status.value = 'error'
-        lastError.value = pullResult.error
-        return { error: pullResult.error }
+        throw pullResult.error
       }
 
-      // Ongoing sync is primarily a backup mechanism. A full bidirectional
-      // merge is out of scope, so the pulled state is logged but not applied
-      // automatically.
-      console.log(
-        '[useSync] Pulled remote state (not applied on ongoing sync):',
-        pullResult
+      const profilesStore = useProfilesStore()
+      const gradesStore = useGradesStore()
+
+      const mergedProfiles = mergeProfiles(profiles, pullResult.profiles)
+      const mergedGrades = mergeGrades(
+        grades,
+        pullResult.grades,
+        mergedProfiles,
+        profiles
       )
 
+      profilesStore.load(mergedProfiles)
+      gradesStore.load(mergedGrades)
+
       status.value = 'idle'
+      trackSyncCompleted('pull')
+
       return {
-        profiles: pullResult.profiles,
-        grades: pullResult.grades,
+        profiles: mergedProfiles,
+        grades: mergedGrades,
         error: null
       }
     } catch (err) {
       status.value = 'error'
       lastError.value = err
+      trackSyncFailed(String(err?.message ?? err))
       return { error: err }
     }
   }

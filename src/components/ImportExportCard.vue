@@ -15,10 +15,15 @@ import { useAppStore } from '../stores/app'
 import { useProfilesStore } from '../stores/profiles'
 import { useGradesStore } from '../stores/grades'
 import { parseClasses } from '../utils/parsers'
+import { useAnalytics } from '../composables/useAnalytics'
 
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
+const {
+  trackProfileImported,
+  trackProfileExported
+} = useAnalytics()
 
 const fileInput = ref(null)
 
@@ -36,6 +41,8 @@ function exportData() {
   a.download = `GPA-${new Date().toISOString().split('T')[0]}.json`
   a.click()
   URL.revokeObjectURL(url)
+
+  trackProfileExported('json')
 }
 
 function importData() {
@@ -74,6 +81,8 @@ function onFileSelected(event) {
           appStore.setCurrentProfileId(newId)
           alert('原档案 ID 不存在，已导入为新档案')
         }
+
+        trackProfileImported('json_v2')
       } else {
         // Legacy format fallback
         if (!data.classes || typeof data.scores !== 'object' || Array.isArray(data.scores)) {
@@ -83,6 +92,8 @@ function onFileSelected(event) {
         const id = profilesStore.addProfile(data.className || '导入配置', data.targetGPA, parseClasses(data.classes))
         gradesStore.load({ ...gradesStore.gradesByProfile, [id]: data.scores })
         appStore.setCurrentProfileId(id)
+
+        trackProfileImported('legacy')
       }
     } catch (e) {
       alert('导入失败：' + e.message)

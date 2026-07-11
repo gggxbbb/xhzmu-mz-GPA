@@ -13,7 +13,7 @@
           <div style="font-size: 0.75rem; color: var(--muted);">目标 {{ profile.targetGPA }} · {{ courseCount(profile) }} 门课</div>
         </div>
         <div v-if="profile.id === appStore.currentProfileId" style="font-size: 0.75rem; color: #2e7d32;">使用中</div>
-        <button v-else class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;" @click="appStore.setCurrentProfileId(profile.id)">切换</button>
+        <button v-else class="btn" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;" @click="switchProfile(profile.id)">切换</button>
       </div>
     </div>
     <button class="btn btn-primary" style="width: 100%; margin-top: 0.8rem;" @click="addProfile">+ 新建档案</button>
@@ -23,12 +23,22 @@
 <script setup>
 import { useAppStore } from '../stores/app'
 import { useProfilesStore } from '../stores/profiles'
+import { useAnalytics } from '../composables/useAnalytics'
 
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
+const {
+  trackProfileSwitched,
+  trackProfileCreated
+} = useAnalytics()
 
 function courseCount(profile) {
   return Object.values(profile.classes).reduce((sum, list) => sum + list.length, 0)
+}
+
+function switchProfile(id) {
+  appStore.setCurrentProfileId(id)
+  trackProfileSwitched(profilesStore.profiles.length)
 }
 
 function addProfile() {
@@ -36,6 +46,8 @@ function addProfile() {
   if (name) {
     const id = profilesStore.addProfile(name)
     appStore.setCurrentProfileId(id)
+    trackProfileCreated()
+    trackProfileSwitched(profilesStore.profiles.length)
   }
 }
 </script>

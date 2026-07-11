@@ -4,8 +4,21 @@ import { getCurrentUserId } from './auth.js'
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_COUNT = 3
 
+const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
+const PHONE_RE = /(?:\+?86)?1[3-9]\d{9}/g
+// Mask likely score values while preserving line:column numbers in stack traces.
+const SCORE_RE = /(?<!:)\b(?:100|\d{1,2}(?:\.\d+)?)\b(?!:)/g
+
 const rateLimitMap = new Map()
 let errorHandlersInstalled = false
+
+function sanitize(text) {
+  if (typeof text !== 'string') return text
+  return text
+    .replace(EMAIL_RE, '[email]')
+    .replace(PHONE_RE, '[phone]')
+    .replace(SCORE_RE, '[score]')
+}
 
 function pruneStaleEntries(now) {
   for (const [key, entry] of rateLimitMap) {
@@ -36,15 +49,15 @@ function isRateLimited(component) {
 }
 
 export async function reportError(error, component = 'global') {
-  const message = error?.message ?? String(error)
-  const stack = error?.stack ?? null
+  const message = sanitize(error?.message ?? String(error))
+  const stack = sanitize(error?.stack ?? null)
 
   if (isRateLimited(component)) {
     return
   }
 
   const userId = getCurrentUserId()
-  const url = typeof window !== 'undefined' ? window.location.href : null
+  const url = sanitize(typeof window !== 'undefined' ? window.location.href : null)
 
   try {
     const { error: insertError } = await supabase

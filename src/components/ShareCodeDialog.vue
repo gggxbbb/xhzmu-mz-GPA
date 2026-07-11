@@ -47,6 +47,7 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue'
 import { createShareCode } from '../services/supabase/shareCodes.js'
+import { useAnalytics } from '../composables/useAnalytics.js'
 
 const props = defineProps({
   open: {
@@ -60,6 +61,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close'])
+
+const { trackShareCodeGenerated } = useAnalytics()
 
 const dialogRef = ref(null)
 const code = ref('')
@@ -105,6 +108,7 @@ async function onGenerate() {
   try {
     const result = await createShareCode(props.payload)
     code.value = result
+    trackShareCodeGenerated()
   } catch (err) {
     error.value = err?.message || '生成分享码失败，请重试'
   } finally {

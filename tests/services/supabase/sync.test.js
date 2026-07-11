@@ -53,13 +53,14 @@ describe('Supabase sync service', () => {
     return import('../../../src/services/supabase/sync.js')
   }
 
-  it('pushState upserts profiles and grades', async () => {
+  it('pushState upserts profiles and grades with updated_at', async () => {
     mocks.getCurrentUserId.mockReturnValue('user-1')
 
     const { pushState } = await loadSync()
 
+    const now = 1_700_000_000_000
     const profiles = [
-      { id: 'p1', name: 'Test', targetGPA: 3.5, classes: { math: 4 } }
+      { id: 'p1', name: 'Test', targetGPA: 3.5, classes: { math: 4 }, updatedAt: now }
     ]
     const grades = { p1: { math: 85 } }
 
@@ -75,7 +76,8 @@ describe('Supabase sync service', () => {
           local_id: 'p1',
           name: 'Test',
           target_gpa: 3.5,
-          classes: { math: 4 }
+          classes: { math: 4 },
+          updated_at: new Date(now).toISOString()
         }
       ],
       { onConflict: 'user_id,local_id' }
@@ -104,7 +106,7 @@ describe('Supabase sync service', () => {
     expect(result.profiles).toEqual([])
     expect(result.grades).toEqual({})
     expect(mocks.profiles.select).toHaveBeenCalledWith(
-      'local_id, name, target_gpa, classes'
+      'local_id, name, target_gpa, classes, updated_at'
     )
     expect(mocks.profiles.eq).toHaveBeenCalledWith('user_id', 'user-1')
     expect(mocks.grades.select).toHaveBeenCalledWith(
@@ -130,8 +132,20 @@ describe('Supabase sync service', () => {
     mocks.getCurrentUserId.mockReturnValue('user-1')
     mocks.profiles.eq.mockResolvedValue({
       data: [
-        { local_id: 'p1', name: 'Alice', target_gpa: 4.0, classes: { math: 4 } },
-        { local_id: 'p2', name: 'Bob', target_gpa: 3.2, classes: {} }
+        {
+          local_id: 'p1',
+          name: 'Alice',
+          target_gpa: 4.0,
+          classes: { math: 4 },
+          updated_at: '2023-11-14T00:00:00.000Z'
+        },
+        {
+          local_id: 'p2',
+          name: 'Bob',
+          target_gpa: 3.2,
+          classes: {},
+          updated_at: '2023-11-15T00:00:00.000Z'
+        }
       ],
       error: null
     })
@@ -149,8 +163,20 @@ describe('Supabase sync service', () => {
 
     expect(result.error).toBeNull()
     expect(result.profiles).toEqual([
-      { id: 'p1', name: 'Alice', targetGPA: 4.0, classes: { math: 4 } },
-      { id: 'p2', name: 'Bob', targetGPA: 3.2, classes: {} }
+      {
+        id: 'p1',
+        name: 'Alice',
+        targetGPA: 4.0,
+        classes: { math: 4 },
+        updatedAt: new Date('2023-11-14T00:00:00.000Z').getTime()
+      },
+      {
+        id: 'p2',
+        name: 'Bob',
+        targetGPA: 3.2,
+        classes: {},
+        updatedAt: new Date('2023-11-15T00:00:00.000Z').getTime()
+      }
     ])
     expect(result.grades).toEqual({
       p1: { math: 90, english: 88 }
@@ -166,11 +192,87 @@ describe('Supabase sync service', () => {
     const { pushState } = await loadSync()
 
     const result = await pushState({
-      profiles: [{ id: 'p1', name: 'Test', targetGPA: 3.5, classes: {} }],
+      profiles: [{ id: 'p1', name: 'Test', targetGPA: 3.5, classes: {}, updatedAt: Date.now() }],
       grades: { p1: { math: 80 } }
     })
 
     expect(result.error).toBe(profilesError)
     expect(mocks.grades.upsert).not.toHaveBeenCalled()
+  })
+
+  it('mergeProfiles keeps local profile when it is newer', async () => {
+    const { mergeProfiles } = await loadSync()
+
+    const local = [{ id: 'p1', name: 'Local', updatedAt: 2000 }]
+    const remote = [{ id: 'p1', name: 'Remote', updatedAt: 1000 }]
+
+    expect(mergeProfiles(local, remote)).toEqual(local)
+  })
+
+  it('mergeProfiles overwrites local profile when remote is newer', async () => {
+    const { mergeProfiles } = await loadSync()
+
+    const local = [{ id: 'p1', name: 'Local', updatedAt: 1000 }]
+    const remote = [{ id: 'p1', name: 'Remote', updatedAt: 2000 }]
+
+    expect(mergeProfiles(local, remote)).toEqual(remote)
+  })
+
+  it('mergeProfiles adds remote-only profiles and keeps local-only profiles', async () => {
+    const { mergeProfiles } = await loadSync()
+
+    const local = [{ id: 'p1', name: 'Local', updatedAt: 1000 }]
+    const remote = [{ id: 'p2', name: 'Remote', updatedAt: 1000 }]
+
+    const merged = mergeProfiles(local, remote)
+
+    expect(merged).toHaveLength(2)
+    expect(merged.find((p) => p.id === 'p1')).toEqual(local[0])
+    expect(merged.find((p) => p.id === 'p2')).toEqual(remote[0])
+  })
+
+  it('mergeGrades uses remote grades when remote profile is newer', async () => {
+    const { mergeProfiles, mergeGrades } = await loadSync()
+
+    const localProfiles = [{ id: 'p1', updatedAt: 1000 }]
+    const remoteProfiles = [{ id: 'p1', updatedAt: 2000 }]
+    const mergedProfiles = mergeProfiles(localProfiles, remoteProfiles)
+
+    const localGrades = { p1: { math: 80 } }
+    const remoteGrades = { p1: { math: 95 } }
+
+    expect(
+      mergeGrades(localGrades, remoteGrades, mergedProfiles, localProfiles)
+    ).toEqual({ p1: { math: 95 } })
+  })
+
+  it('mergeGrades keeps local grades when local profile is newer', async () => {
+    const { mergeProfiles, mergeGrades } = await loadSync()
+
+    const localProfiles = [{ id: 'p1', updatedAt: 2000 }]
+    const remoteProfiles = [{ id: 'p1', updatedAt: 1000 }]
+    const mergedProfiles = mergeProfiles(localProfiles, remoteProfiles)
+
+    const localGrades = { p1: { math: 80 } }
+    const remoteGrades = { p1: { math: 95 } }
+
+    expect(
+      mergeGrades(localGrades, remoteGrades, mergedProfiles, localProfiles)
+    ).toEqual({ p1: { math: 80 } })
+  })
+
+  it('mergeGrades clears local grades when remote profile is newer and has no grades', async () => {
+    const { mergeProfiles, mergeGrades } = await loadSync()
+
+    const localProfiles = [{ id: 'p1', updatedAt: 1000 }]
+    const remoteProfiles = [{ id: 'p1', updatedAt: 2000 }]
+    const mergedProfiles = mergeProfiles(localProfiles, remoteProfiles)
+
+    const localGrades = { p1: { math: 80 } }
+    const remoteGrades = {}
+
+    expect(
+      mergeGrades(localGrades, remoteGrades, mergedProfiles, localProfiles)
+    ).toEqual({ p1: {} })
   })
 })
