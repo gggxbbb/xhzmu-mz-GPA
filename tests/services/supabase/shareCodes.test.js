@@ -7,7 +7,33 @@ const mocks = vi.hoisted(() => {
 
   const from = vi.fn(() => ({ insert }))
 
-  return { getCurrentUserId, from, insert, rpc }
+  let randomCallCount = 0
+  const getRandomValues = vi.fn((array) => {
+    for (let i = 0; i < array.length; i++) {
+      array[i] = randomCallCount * 100 + i
+    }
+    randomCallCount++
+    return array
+  })
+
+  const resetRandomCallCount = () => {
+    randomCallCount = 0
+  }
+
+  Object.defineProperty(globalThis, 'crypto', {
+    value: { getRandomValues },
+    writable: true,
+    configurable: true
+  })
+
+  return {
+    getCurrentUserId,
+    from,
+    insert,
+    rpc,
+    getRandomValues,
+    resetRandomCallCount
+  }
 })
 
 vi.mock('../../../src/services/supabase/auth.js', () => ({
@@ -32,6 +58,8 @@ describe('Share code service', () => {
     mocks.from.mockClear()
     mocks.insert.mockReset().mockResolvedValue({ error: null })
     mocks.rpc.mockReset().mockResolvedValue({ data: { profileId: 'p1' }, error: null })
+    mocks.getRandomValues.mockClear()
+    mocks.resetRandomCallCount()
   })
 
   it('createShareCode inserts and returns a 6-character alphanumeric code', async () => {
@@ -53,6 +81,52 @@ describe('Share code service', () => {
     ])
   })
 
+  it('createShareCode uses crypto.getRandomValues for secure random generation', async () => {
+    const { createShareCode } = await loadShareCodes()
+
+    await createShareCode({ profileId: 'p1' })
+
+    expect(mocks.getRandomValues).toHaveBeenCalledTimes(1)
+    expect(mocks.getRandomValues).toHaveBeenCalledWith(expect.any(Uint32Array))
+    const array = mocks.getRandomValues.mock.calls[0][0]
+    expect(array).toHaveLength(6)
+  })
+
+  it('createShareCode retries on duplicate key collision and succeeds', async () => {
+    mocks.insert
+      .mockResolvedValueOnce({
+        error: {
+          code: '23505',
+          message: 'duplicate key value violates unique constraint'
+        }
+      })
+      .mockResolvedValueOnce({ error: null })
+
+    const { createShareCode } = await loadShareCodes()
+
+    const code = await createShareCode({ profileId: 'p1' })
+
+    expect(code).toHaveLength(6)
+    expect(mocks.insert).toHaveBeenCalledTimes(2)
+    expect(mocks.getRandomValues).toHaveBeenCalledTimes(2)
+  })
+
+  it('createShareCode throws after max retries on repeated collisions', async () => {
+    mocks.insert.mockResolvedValue({
+      error: {
+        code: '23505',
+        message: 'duplicate key value violates unique constraint'
+      }
+    })
+
+    const { createShareCode } = await loadShareCodes()
+
+    await expect(createShareCode({ profileId: 'p1' })).rejects.toThrow(
+      /Failed to create share code, please try again/i
+    )
+    expect(mocks.insert).toHaveBeenCalledTimes(5)
+  })
+
   it('createShareCode throws when the user is not authenticated', async () => {
     mocks.getCurrentUserId.mockReturnValue(null)
 
@@ -62,12 +136,36 @@ describe('Share code service', () => {
     expect(mocks.insert).not.toHaveBeenCalled()
   })
 
-  it('createShareCode throws when the insert fails', async () => {
+  it('createShareCode throws when the payload is not a non-null object', async () => {
+    const { createShareCode } = await loadShareCodes()
+
+    await expect(createShareCode(null)).rejects.toThrow(/Invalid payload/i)
+    await expect(createShareCode('string')).rejects.toThrow(/Invalid payload/i)
+    await expect(createShareCode([])).rejects.toThrow(/Invalid payload/i)
+    expect(mocks.insert).not.toHaveBeenCalled()
+  })
+
+  it('createShareCode defaults invalid ttlDays to 7', async () => {
+    const { createShareCode } = await loadShareCodes()
+
+    await createShareCode({ profileId: 'p1' }, -1)
+
+    const inserted = mocks.insert.mock.calls[0][0][0]
+    const expiresAt = new Date(inserted.expires_at)
+    const now = new Date()
+    const diffDays = (expiresAt - now) / (1000 * 60 * 60 * 24)
+    expect(diffDays).toBeCloseTo(7, 0)
+  })
+
+  it('createShareCode throws a sanitized error when the insert fails', async () => {
     mocks.insert.mockResolvedValue({ error: { message: 'insert failed' } })
 
     const { createShareCode } = await loadShareCodes()
 
-    await expect(createShareCode({})).rejects.toThrow(/insert failed/)
+    await expect(createShareCode({})).rejects.toThrow(
+      /Failed to create share code, please try again/i
+    )
+    await expect(createShareCode({})).rejects.not.toThrow(/insert failed/i)
   })
 
   it('getShareCodePayload calls the RPC with the correct parameters and returns the payload', async () => {
@@ -89,11 +187,14 @@ describe('Share code service', () => {
     )
   })
 
-  it('getShareCodePayload throws when the RPC fails', async () => {
+  it('getShareCodePayload throws a sanitized error when the RPC fails', async () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { message: 'rpc error' } })
 
     const { getShareCodePayload } = await loadShareCodes()
 
-    await expect(getShareCodePayload('BAD')).rejects.toThrow(/rpc error/)
+    await expect(getShareCodePayload('BAD')).rejects.toThrow(
+      /Failed to retrieve share code, please try again/i
+    )
+    await expect(getShareCodePayload('BAD')).rejects.not.toThrow(/rpc error/i)
   })
 })
