@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     local_id text NOT NULL,
     name text,
     target_gpa numeric,
-    classes jsonb NOT NULL DEFAULT '[]'::jsonb,
+    classes jsonb NOT NULL DEFAULT '{}'::jsonb,
+    CONSTRAINT profiles_target_gpa_check CHECK (target_gpa >= 0 AND target_gpa <= 5),
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
     UNIQUE (user_id, local_id)
@@ -26,8 +27,10 @@ CREATE TABLE IF NOT EXISTS public.grades (
     profile_local_id text NOT NULL,
     course_name text NOT NULL,
     score numeric NOT NULL,
+    CONSTRAINT grades_score_check CHECK (score >= 0 AND score <= 100),
     created_at timestamp with time zone NOT NULL DEFAULT now(),
-    updated_at timestamp with time zone NOT NULL DEFAULT now()
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    FOREIGN KEY (user_id, profile_local_id) REFERENCES public.profiles(user_id, local_id) ON DELETE CASCADE
 );
 
 COMMENT ON TABLE public.grades IS 'Course grades associated with a user profile.';
@@ -67,10 +70,17 @@ CREATE TABLE IF NOT EXISTS public.errors (
 
 COMMENT ON TABLE public.errors IS 'Client error reports for debugging.';
 
+-- Indexes on foreign-key and RLS-filter columns
+CREATE INDEX IF NOT EXISTS idx_grades_user_id ON public.grades(user_id);
+CREATE INDEX IF NOT EXISTS idx_share_codes_user_id ON public.share_codes(user_id);
+CREATE INDEX IF NOT EXISTS idx_events_user_id ON public.events(user_id);
+CREATE INDEX IF NOT EXISTS idx_errors_user_id ON public.errors(user_id);
+
 -- Helper function to auto-update updated_at columns
 CREATE OR REPLACE FUNCTION public.set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
+    SET LOCAL search_path = public;
     NEW.updated_at = now();
     RETURN NEW;
 END;
@@ -142,7 +152,7 @@ CREATE POLICY grades_delete_own ON public.grades
 DROP POLICY IF EXISTS share_codes_select_by_code ON public.share_codes;
 CREATE POLICY share_codes_select_by_code ON public.share_codes
     FOR SELECT TO anon, authenticated
-    USING (code = code);
+    USING (code = code AND (expires_at IS NULL OR expires_at > now()));
 
 DROP POLICY IF EXISTS share_codes_insert_own ON public.share_codes;
 CREATE POLICY share_codes_insert_own ON public.share_codes
