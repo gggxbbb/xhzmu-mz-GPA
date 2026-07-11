@@ -26,6 +26,14 @@ describe('RecoverDialog', () => {
     })
   }
 
+  it('opens the dialog when mounted with open: true', async () => {
+    const wrapper = mountDialog({ open: true })
+    await flushPromises()
+
+    const dialog = wrapper.find('dialog').element
+    expect(dialog.open).toBe(true)
+  })
+
   it('calls getShareCodePayload and emits recovered when code is submitted', async () => {
     const payload = { courses: [{ name: 'Math' }] }
     getShareCodePayload.mockResolvedValue(payload)

@@ -1,5 +1,20 @@
 const store = new Map()
 
+// jsdom does not implement HTMLDialogElement methods; polyfill them so dialog
+// components can be tested with showModal/close.
+if (globalThis.HTMLDialogElement) {
+  if (typeof globalThis.HTMLDialogElement.prototype.showModal !== 'function') {
+    globalThis.HTMLDialogElement.prototype.showModal = function () {
+      this.setAttribute('open', '')
+    }
+  }
+  if (typeof globalThis.HTMLDialogElement.prototype.close !== 'function') {
+    globalThis.HTMLDialogElement.prototype.close = function () {
+      this.removeAttribute('open')
+    }
+  }
+}
+
 Object.defineProperty(globalThis, 'localStorage', {
   value: {
     getItem: (key) => {

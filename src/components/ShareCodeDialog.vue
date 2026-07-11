@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { createShareCode } from '../services/supabase/shareCodes.js'
 
 const props = defineProps({
@@ -68,7 +68,11 @@ const error = ref('')
 
 watch(() => props.open, (isOpen) => {
   const dialog = dialogRef.value
-  if (!dialog) return
+  if (!dialog) {
+    // On initial render the dialog ref may not be bound yet; defer opening.
+    if (isOpen) nextTick(() => dialogRef.value?.showModal())
+    return
+  }
 
   if (isOpen) {
     code.value = ''
@@ -81,7 +85,7 @@ watch(() => props.open, (isOpen) => {
       dialog.close()
     }
   }
-})
+}, { immediate: true, flush: 'post' })
 
 function onClose() {
   emit('close')

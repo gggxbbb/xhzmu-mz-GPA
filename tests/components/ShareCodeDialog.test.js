@@ -27,6 +27,14 @@ describe('ShareCodeDialog', () => {
     })
   }
 
+  it('opens the dialog when mounted with open: true', async () => {
+    const wrapper = mountDialog({ open: true })
+    await flushPromises()
+
+    const dialog = wrapper.find('dialog').element
+    expect(dialog.open).toBe(true)
+  })
+
   it('calls createShareCode and displays the generated code', async () => {
     createShareCode.mockResolvedValue('A1B2C3')
     const wrapper = mountDialog({ open: true })
