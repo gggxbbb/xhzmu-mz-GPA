@@ -40,6 +40,7 @@ import { reactive, ref, watch, computed } from 'vue'
 import { useProfilesStore } from '../stores/profiles'
 import { useAppStore } from '../stores/app'
 import { serializeClasses, parseClasses } from '../utils/parsers'
+import { sortClasses } from '../utils/semesterSort'
 
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
@@ -136,7 +137,7 @@ function save() {
   profilesStore.updateProfile(currentProfile.value.id, {
     name: draft.name,
     targetGPA,
-    classes: JSON.parse(JSON.stringify(filteredClasses))
+    classes: sortClasses(filteredClasses)
   })
   syncDraft()
 }
