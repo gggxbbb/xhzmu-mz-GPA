@@ -6,6 +6,8 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
   status: {
     type: String,
@@ -23,7 +25,7 @@ const labels = {
   error: '同步失败'
 }
 
-const label = labels[props.status] ?? labels.idle
+const label = computed(() => labels[props.status] ?? labels.idle)
 </script>
 
 <style scoped>

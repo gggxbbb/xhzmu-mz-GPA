@@ -28,4 +28,17 @@ describe('SyncStatusBar', () => {
     })
     expect(wrapper.text()).toContain('同步失败')
   })
+
+  it('updates label reactively when status prop changes', async () => {
+    const wrapper = mount(SyncStatusBar, {
+      props: { status: 'idle' }
+    })
+    expect(wrapper.text()).toContain('已同步')
+
+    await wrapper.setProps({ status: 'error' })
+    expect(wrapper.text()).toContain('同步失败')
+
+    await wrapper.setProps({ status: 'syncing' })
+    expect(wrapper.text()).toContain('同步中…')
+  })
 })

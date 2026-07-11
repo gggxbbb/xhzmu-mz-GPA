@@ -1,12 +1,20 @@
 <template>
-  <dialog :open="open" class="recover-dialog" role="dialog" aria-modal="true" aria-labelledby="recover-title">
+  <dialog
+    ref="dialogRef"
+    class="recover-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="recover-title"
+    @cancel.prevent="onClose"
+    @click="onBackdropClick"
+  >
     <article class="card" v-if="open">
       <header>
-        <h2 id="recover-title" style="font-size: 1rem; font-weight: bold; margin: 0;">恢复数据</h2>
+        <h2 id="recover-title" class="dialog-title">恢复数据</h2>
       </header>
 
       <div class="dialog-body">
-        <p style="margin: 0 0 0.75rem 0; color: var(--muted, #666666); font-size: 0.9rem;">
+        <p class="dialog-description">
           输入 6 位分享码，即可恢复对应数据。
         </p>
 
@@ -27,7 +35,7 @@
         </div>
       </div>
 
-      <footer style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem;">
+      <footer class="dialog-footer">
         <button class="btn" @click="onClose" :disabled="loading">关闭</button>
         <button
           class="btn btn-primary"
@@ -56,6 +64,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'recovered'])
 
+const dialogRef = ref(null)
 const code = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -64,15 +73,31 @@ const codeInput = ref(null)
 const isCodeValid = computed(() => code.value.length === 6)
 
 watch(() => props.open, (isOpen) => {
+  const dialog = dialogRef.value
+  if (!dialog) return
+
   if (isOpen) {
     code.value = ''
     error.value = ''
+    if (!dialog.open) {
+      dialog.showModal()
+    }
     nextTick(() => codeInput.value?.focus())
+  } else {
+    if (dialog.open) {
+      dialog.close()
+    }
   }
 })
 
 function onClose() {
   emit('close')
+}
+
+function onBackdropClick(event) {
+  if (event.target === dialogRef.value) {
+    onClose()
+  }
 }
 
 async function onRecover() {
@@ -106,16 +131,35 @@ async function onRecover() {
   background: rgba(0, 0, 0, 0.45);
 }
 
+.dialog-title {
+  font-size: 1rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.dialog-description {
+  margin: 0 0 0.75rem 0;
+  color: var(--muted, #666666);
+  font-size: 0.9rem;
+}
+
 .dialog-body {
   margin-top: 0.75rem;
+}
+
+.dialog-footer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 .error-message {
   margin-top: 0.75rem;
   padding: 0.6rem;
   border-radius: var(--radius, 0.75rem);
-  background: #ffebee;
-  color: #c62828;
+  background: var(--danger-bg, #ffebee);
+  color: var(--danger, #c62828);
   font-size: 0.85rem;
 }
 </style>
