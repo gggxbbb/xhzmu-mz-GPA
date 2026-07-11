@@ -21,7 +21,7 @@ import { isSupabaseConfigured } from './services/supabase/config.js'
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
-const { status: syncStatus, sync } = useSync()
+const { status: syncStatus, isApplying, sync } = useSync()
 
 let syncTimeout = null
 let pendingSync = false
@@ -32,7 +32,7 @@ function canSync() {
 }
 
 function syncStores() {
-  if (!canSync()) {
+  if (!canSync() || isApplying.value) {
     return
   }
 

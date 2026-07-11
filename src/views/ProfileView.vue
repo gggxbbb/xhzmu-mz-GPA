@@ -66,7 +66,7 @@ import RecoverDialog from '../components/RecoverDialog.vue'
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
-const { sync, status, lastError } = useSync()
+const { sync, status, lastError, isApplying } = useSync()
 const { trackShareCodeRecovered } = useAnalytics()
 
 const currentProfileId = computed(() => appStore.currentProfileId)
@@ -91,6 +91,8 @@ async function handleRecovered(payload) {
 
   const { mergeProfiles, mergeGrades } = await import('../services/supabase/sync.js')
 
+  isApplying.value = true
+
   let mergedProfiles = profilesStore.profiles
   if (Array.isArray(payload.profiles)) {
     mergedProfiles = mergeProfiles(profilesStore.profiles, payload.profiles)
@@ -106,6 +108,8 @@ async function handleRecovered(payload) {
     )
     gradesStore.load(mergedGrades)
   }
+
+  isApplying.value = false
 
   const previousId = currentProfileId.value
   if (!mergedProfiles.some((p) => p.id === previousId)) {

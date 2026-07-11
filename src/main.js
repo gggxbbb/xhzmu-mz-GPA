@@ -18,7 +18,7 @@ const app = createApp(App)
 app.use(pinia)
 app.use(router)
 
-const { status, lastError } = useSync()
+const { status, lastError, isApplying } = useSync()
 
 function initializeState({ flushAnalytics } = {}) {
   const appStore = useAppStore()
@@ -123,8 +123,10 @@ async function initializeSupabase() {
       { syncMode: true }
     )
 
+    isApplying.value = true
     profilesStore.load(mergedProfiles)
     gradesStore.load(mergedGrades)
+    isApplying.value = false
 
     const currentId = appStore.currentProfileId
     if (!mergedProfiles.some((p) => p.id === currentId)) {
@@ -138,6 +140,7 @@ async function initializeSupabase() {
       grades: mergedGrades
     })
   } catch (err) {
+    isApplying.value = false
     status.value = 'error'
     lastError.value = err
     const { trackSyncFailed } = useAnalytics()

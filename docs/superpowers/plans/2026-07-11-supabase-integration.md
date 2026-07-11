@@ -1172,6 +1172,7 @@ import { useAnalytics } from './useAnalytics.js'
 
 const status = ref('idle') // idle | syncing | offline | error
 const lastError = ref(null)
+const isApplying = ref(false)
 
 const { trackSyncCompleted, trackSyncFailed } = useAnalytics()
 
@@ -1193,12 +1194,20 @@ export function useSync() {
     status.value = 'syncing'
 
     try {
-      const {
-        pushState,
-        pullState,
-        mergeProfiles,
-        mergeGrades
-      } = await import('../services/supabase/sync.js')
+      const [
+        { pushState, pullState, mergeProfiles, mergeGrades },
+        { initAnonymousAuth, getCurrentUserId }
+      ] = await Promise.all([
+        import('../services/supabase/sync.js'),
+        import('../services/supabase/auth.js')
+      ])
+
+      if (!getCurrentUserId()) {
+        const { error: authError } = await initAnonymousAuth()
+        if (authError || !getCurrentUserId()) {
+          throw authError || new Error('Anonymous authentication failed')
+        }
+      }
 
       const pushResult = await pushState({ profiles, grades })
       if (pushResult?.error) {
@@ -1216,8 +1225,10 @@ export function useSync() {
       const mergedProfiles = mergeProfiles(profiles, pullResult.profiles, { syncMode: true })
       const mergedGrades = mergeGrades(grades, pullResult.grades, mergedProfiles, { syncMode: true })
 
+      isApplying.value = true
       profilesStore.load(mergedProfiles)
       gradesStore.load(mergedGrades)
+      isApplying.value = false
 
       status.value = 'idle'
       trackSyncCompleted('push_pull')
@@ -1228,6 +1239,7 @@ export function useSync() {
         error: null
       }
     } catch (err) {
+      isApplying.value = false
       status.value = 'error'
       lastError.value = err
       trackSyncFailed(String(err?.message ?? err))
@@ -1235,7 +1247,7 @@ export function useSync() {
     }
   }
 
-  return { status, lastError, sync }
+  return { status, lastError, isApplying, sync }
 }
 ```
 
@@ -1636,7 +1648,7 @@ const app = createApp(App)
 app.use(pinia)
 app.use(router)
 
-const { status, lastError } = useSync()
+const { status, lastError, isApplying } = useSync()
 
 function initializeState({ flushAnalytics } = {}) {
   const appStore = useAppStore()
@@ -1739,8 +1751,10 @@ async function initializeSupabase() {
       { syncMode: true }
     )
 
+    isApplying.value = true
     profilesStore.load(mergedProfiles)
     gradesStore.load(mergedGrades)
+    isApplying.value = false
 
     const currentId = appStore.currentProfileId
     if (!mergedProfiles.some((p) => p.id === currentId)) {
@@ -1750,6 +1764,7 @@ async function initializeSupabase() {
     status.value = 'idle'
     trackSyncCompleted('push_pull')
   } catch (err) {
+    isApplying.value = false
     status.value = 'error'
     lastError.value = err
     const { trackSyncFailed } = useAnalytics()
@@ -1816,7 +1831,7 @@ import { isSupabaseConfigured } from './services/supabase/config.js'
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
-const { status: syncStatus, sync } = useSync()
+const { status: syncStatus, isApplying, sync } = useSync()
 
 let syncTimeout = null
 let pendingSync = false
@@ -1827,7 +1842,7 @@ function canSync() {
 }
 
 function syncStores() {
-  if (!canSync()) {
+  if (!canSync() || isApplying.value) {
     return
   }
 
@@ -1947,7 +1962,7 @@ import RecoverDialog from '../components/RecoverDialog.vue'
 
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
-const { status: syncStatus, lastError: syncError, sync } = useSync()
+const { status: syncStatus, lastError: syncError, sync, isApplying } = useSync()
 
 const showShare = ref(false)
 const showRecover = ref(false)
@@ -1969,6 +1984,8 @@ async function handleRecovered(payload) {
 
   const { mergeProfiles, mergeGrades } = await import('../services/supabase/sync.js')
 
+  isApplying.value = true
+
   let mergedProfiles = profilesStore.profiles
   if (Array.isArray(payload.profiles)) {
     mergedProfiles = mergeProfiles(profilesStore.profiles, payload.profiles)
@@ -1984,6 +2001,8 @@ async function handleRecovered(payload) {
     )
     gradesStore.load(mergedGrades)
   }
+
+  isApplying.value = false
 
   const previousId = appStore.currentProfileId
   if (!mergedProfiles.some((p) => p.id === previousId)) {

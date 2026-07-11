@@ -6,6 +6,7 @@ import { useAnalytics } from './useAnalytics.js'
 
 const status = ref('idle')
 const lastError = ref(null)
+const isApplying = ref(false)
 
 const { trackSyncCompleted, trackSyncFailed } = useAnalytics()
 
@@ -27,12 +28,20 @@ export function useSync() {
     status.value = 'syncing'
 
     try {
-      const {
-        pushState,
-        pullState,
-        mergeProfiles,
-        mergeGrades
-      } = await import('../services/supabase/sync.js')
+      const [
+        { pushState, pullState, mergeProfiles, mergeGrades },
+        { initAnonymousAuth, getCurrentUserId }
+      ] = await Promise.all([
+        import('../services/supabase/sync.js'),
+        import('../services/supabase/auth.js')
+      ])
+
+      if (!getCurrentUserId()) {
+        const { error: authError } = await initAnonymousAuth()
+        if (authError || !getCurrentUserId()) {
+          throw authError || new Error('Anonymous authentication failed')
+        }
+      }
 
       const pushResult = await pushState({ profiles, grades })
       if (pushResult?.error) {
@@ -50,8 +59,10 @@ export function useSync() {
       const mergedProfiles = mergeProfiles(profiles, pullResult.profiles, { syncMode: true })
       const mergedGrades = mergeGrades(grades, pullResult.grades, mergedProfiles, { syncMode: true })
 
+      isApplying.value = true
       profilesStore.load(mergedProfiles)
       gradesStore.load(mergedGrades)
+      isApplying.value = false
 
       status.value = 'idle'
       trackSyncCompleted('push_pull')
@@ -62,6 +73,7 @@ export function useSync() {
         error: null
       }
     } catch (err) {
+      isApplying.value = false
       status.value = 'error'
       lastError.value = err
       trackSyncFailed(String(err?.message ?? err))
@@ -69,5 +81,5 @@ export function useSync() {
     }
   }
 
-  return { status, lastError, sync }
+  return { status, lastError, isApplying, sync }
 }
