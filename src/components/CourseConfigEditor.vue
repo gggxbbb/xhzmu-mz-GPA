@@ -53,7 +53,7 @@ const textMode = ref('')
 function syncDraft() {
   draft.name = currentProfile.value.name
   draft.targetGPA = currentProfile.value.targetGPA
-  draft.classes = JSON.parse(JSON.stringify(currentProfile.value.classes))
+  draft.classes = sortClasses(JSON.parse(JSON.stringify(currentProfile.value.classes)))
   Object.keys(semesterNames).forEach(k => delete semesterNames[k])
   Object.keys(draft.classes).forEach(k => { semesterNames[k] = k })
   textMode.value = serializeClasses(draft.classes)
