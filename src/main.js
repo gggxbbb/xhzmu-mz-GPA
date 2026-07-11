@@ -167,6 +167,7 @@ async function bootstrap() {
     console.warn(
       'Supabase environment variables are missing; running without cloud sync.'
     )
+    status.value = 'offline'
     initializeState()
     app.mount('#app')
   }

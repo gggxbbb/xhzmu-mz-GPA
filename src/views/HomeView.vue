@@ -72,7 +72,6 @@ let gradeTrackTimeout = null
 
 function onUpdateGrade(courseName, value) {
   gradesStore.setGrade(appStore.currentProfileId, courseName, value)
-  profilesStore.touchProfile(appStore.currentProfileId)
 
   clearTimeout(gradeTrackTimeout)
   gradeTrackTimeout = setTimeout(() => {
