@@ -40,6 +40,10 @@ function initializeState() {
     appStore.setCurrentProfileId(profilesStore.profiles[0]?.id || 'default')
   }
 
+  if (!appStore.currentProfileId) {
+    appStore.setCurrentProfileId('default')
+  }
+
   const save = () => {
     saveAppState({
       version: 2,

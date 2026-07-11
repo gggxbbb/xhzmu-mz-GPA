@@ -18,20 +18,23 @@ import { useAppStore } from '../stores/app'
 
 const props = defineProps({
   gpa: { type: Number, required: true },
-  targetGPA: { type: Number, required: true }
+  targetGPA: { type: Number, default: 0 }
 })
 
 const appStore = useAppStore()
 
+const safeGPA = computed(() => Number.isFinite(props.gpa) ? props.gpa : 0)
+const safeTarget = computed(() => Number.isFinite(props.targetGPA) ? props.targetGPA : 0)
+
 const formattedGPA = computed(() => {
-  const decimals = appStore.showVeryLongGPA ? 5 : (Math.abs(props.gpa - props.targetGPA) < 0.01 ? 3 : 2)
-  return props.gpa.toFixed(decimals)
+  const decimals = appStore.showVeryLongGPA ? 5 : (Math.abs(safeGPA.value - safeTarget.value) < 0.01 ? 3 : 2)
+  return safeGPA.value.toFixed(decimals)
 })
 
-const isBelowTarget = computed(() => props.gpa < props.targetGPA && props.gpa > 0)
+const isBelowTarget = computed(() => safeGPA.value < safeTarget.value && safeGPA.value > 0)
 
 const diffText = computed(() => {
-  const diff = props.gpa - props.targetGPA
+  const diff = safeGPA.value - safeTarget.value
   if (Math.abs(diff) < 0.001) return '刚好达标'
   if (diff > 0) return `已超 ${diff.toFixed(2)}`
   return `还差 ${Math.abs(diff).toFixed(2)}`

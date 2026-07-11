@@ -36,7 +36,7 @@ const props = defineProps({
   courses: Array,
   grades: Object,
   allCourses: Array,
-  semesterGPA: Number
+  semesterGPA: { type: Number, default: 0 }
 })
 
 const emit = defineEmits(['updateGrade', 'toggleWhatIf'])

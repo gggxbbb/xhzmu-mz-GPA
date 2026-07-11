@@ -1,6 +1,6 @@
 <template>
   <div>
-    <GpaSummaryCard :gpa="gpa.currentGPA.value" :target-gpa="currentProfile.targetGPA" />
+    <GpaSummaryCard :gpa="gpa.currentGPA.value" :target-gpa="currentProfile?.targetGPA ?? 0" />
     <MetricGrid
       :total-credits="gpa.totalCredits.value"
       :remaining-credits="gpa.remainingCredits.value"

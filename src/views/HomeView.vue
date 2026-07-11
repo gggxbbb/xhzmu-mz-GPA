@@ -15,7 +15,7 @@
       :courses="courses"
       :grades="currentGrades"
       :all-courses="gpa.allCourses.value"
-      :semester-gpa="gpa.semesterGPAs.value[semester] || 0"
+      :semester-gpa="gpa.semesterGPAs.value?.[semester] ?? 0"
       @update-grade="onUpdateGrade"
       @toggle-what-if="uiStore.setActiveWhatIfCourse"
     />
