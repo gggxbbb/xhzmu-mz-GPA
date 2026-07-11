@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="currentProfile">
     <GpaCard :gpa="gpa.currentGPA.value" :target-gpa="currentProfile.targetGPA" />
     <StatChips
       :total-credits="gpa.totalCredits.value"
@@ -23,6 +23,7 @@
       未找到匹配课程
     </div>
   </div>
+  <div v-else class="card" style="text-align: center;">加载中...</div>
 </template>
 
 <script setup>

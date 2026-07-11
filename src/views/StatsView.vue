@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div v-if="currentProfile">
     <GpaSummaryCard :gpa="gpa.currentGPA.value" :target-gpa="currentProfile?.targetGPA ?? 0" />
     <MetricGrid
       :total-credits="gpa.totalCredits.value"
@@ -17,6 +17,7 @@
     <GpaTrendChart :semester-gpas="gpa.semesterGPAs.value" />
     <ScoreDistributionChart :grades="currentGrades" />
   </div>
+  <div v-else class="card" style="text-align: center;">加载中...</div>
 </template>
 
 <script setup>

@@ -7,7 +7,7 @@
     >
       <span style="font-weight: bold;">{{ semester }}</span>
       <span style="font-size: 0.85rem; color: var(--muted);">
-        {{ expanded ? '▼' : '▶' }} GPA {{ semesterGPA.toFixed(2) }}
+        {{ expanded ? '▼' : '▶' }} GPA {{ Number.isFinite(semesterGPA) ? semesterGPA.toFixed(2) : '0.00' }}
       </span>
     </button>
     <div v-if="expanded" style="padding: 0 0.8rem;">

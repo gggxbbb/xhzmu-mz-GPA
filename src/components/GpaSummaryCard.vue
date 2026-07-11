@@ -14,14 +14,16 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  gpa: Number,
-  targetGPA: Number
+  gpa: { type: Number, default: 0 },
+  targetGPA: { type: Number, default: 0 }
 })
 
 const gpa = computed(() => Number.isFinite(props.gpa) ? props.gpa : 0)
+const targetGPA = computed(() => Number.isFinite(props.targetGPA) ? props.targetGPA : 0)
 
 const summaryText = computed(() => {
-  const diff = gpa.value - props.targetGPA
+  const diff = gpa.value - targetGPA.value
+  if (!Number.isFinite(diff)) return '加载中...'
   if (Math.abs(diff) < 0.001) return '刚好达标'
   if (diff > 0) return `已超目标 ${diff.toFixed(2)}`
   return `还差 ${Math.abs(diff).toFixed(2)}`
