@@ -1,5 +1,7 @@
 -- Initial Supabase schema for GPA calculator
 -- Tables: profiles, grades, share_codes, events, errors
+-- NOTE: Share codes must be read via supabase.rpc('get_share_code', { code_input: code })
+--       instead of supabase.from('share_codes').select() because direct SELECT is denied.
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -9,8 +11,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     local_id text NOT NULL,
-    name text,
-    target_gpa numeric,
+    name text NOT NULL,
+    target_gpa numeric NOT NULL,
     classes jsonb NOT NULL DEFAULT '{}'::jsonb,
     CONSTRAINT profiles_target_gpa_check CHECK (target_gpa >= 0 AND target_gpa <= 5),
     created_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -23,14 +25,15 @@ COMMENT ON TABLE public.profiles IS 'User profiles and GPA class configurations.
 -- Grades table: stores course grades linked to a profile
 CREATE TABLE IF NOT EXISTS public.grades (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL,
     profile_local_id text NOT NULL,
     course_name text NOT NULL,
     score numeric NOT NULL,
     CONSTRAINT grades_score_check CHECK (score >= 0 AND score <= 100),
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
-    FOREIGN KEY (user_id, profile_local_id) REFERENCES public.profiles(user_id, local_id) ON DELETE CASCADE
+    FOREIGN KEY (user_id, profile_local_id) REFERENCES public.profiles(user_id, local_id) ON DELETE CASCADE,
+    UNIQUE (user_id, profile_local_id, course_name)
 );
 
 COMMENT ON TABLE public.grades IS 'Course grades associated with a user profile.';
@@ -78,13 +81,15 @@ CREATE INDEX IF NOT EXISTS idx_errors_user_id ON public.errors(user_id);
 
 -- Helper function to auto-update updated_at columns
 CREATE OR REPLACE FUNCTION public.set_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
-    SET LOCAL search_path = public;
     NEW.updated_at = now();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Apply updated_at triggers
 DROP TRIGGER IF EXISTS set_profiles_updated_at ON public.profiles;
@@ -149,10 +154,30 @@ CREATE POLICY grades_delete_own ON public.grades
     USING (user_id = auth.uid());
 
 -- Share codes RLS policies
+-- Direct SELECT is denied; use get_share_code(code_input) RPC instead.
 DROP POLICY IF EXISTS share_codes_select_by_code ON public.share_codes;
 CREATE POLICY share_codes_select_by_code ON public.share_codes
     FOR SELECT TO anon, authenticated
-    USING (code = code AND (expires_at IS NULL OR expires_at > now()));
+    USING (false);
+
+-- Security-definer function to look up a share code payload by code
+CREATE OR REPLACE FUNCTION public.get_share_code(code_input text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN (
+        SELECT payload
+        FROM public.share_codes
+        WHERE code = code_input
+          AND (expires_at IS NULL OR expires_at > now())
+    );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_share_code(text) TO anon, authenticated;
 
 DROP POLICY IF EXISTS share_codes_insert_own ON public.share_codes;
 CREATE POLICY share_codes_insert_own ON public.share_codes
