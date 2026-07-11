@@ -1,4 +1,5 @@
 import { computed } from 'vue'
+import { sortClasses } from '../utils/semesterSort'
 
 export function calculateGPA(courses, grades) {
   let weightedGradePoints = 0
@@ -15,10 +16,12 @@ export function calculateGPA(courses, grades) {
 }
 
 export function useGPA(profile, grades) {
+  const sortedClasses = computed(() => sortClasses(profile.value.classes))
+
   const allCourses = computed(() => {
     const list = []
-    for (const semester of Object.keys(profile.value.classes)) {
-      for (const course of profile.value.classes[semester]) {
+    for (const semester of Object.keys(sortedClasses.value)) {
+      for (const course of sortedClasses.value[semester]) {
         list.push({ ...course, semester })
       }
     }
@@ -41,8 +44,8 @@ export function useGPA(profile, grades) {
 
   const semesterGPAs = computed(() => {
     const result = {}
-    for (const semester of Object.keys(profile.value.classes)) {
-      result[semester] = calculateGPA(profile.value.classes[semester], grades.value)
+    for (const semester of Object.keys(sortedClasses.value)) {
+      result[semester] = calculateGPA(sortedClasses.value[semester], grades.value)
     }
     return result
   })
