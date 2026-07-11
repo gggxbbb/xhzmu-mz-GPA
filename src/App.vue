@@ -25,12 +25,9 @@ const { status: syncStatus, sync } = useSync()
 let syncTimeout = null
 
 function syncStores() {
+  if (syncStatus.value === 'syncing') return
   clearTimeout(syncTimeout)
   syncTimeout = setTimeout(() => {
-    if (syncStatus.value === 'syncing') {
-      syncStores()
-      return
-    }
     sync({
       profiles: profilesStore.profiles,
       grades: gradesStore.gradesByProfile
