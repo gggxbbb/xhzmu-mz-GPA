@@ -52,8 +52,7 @@ describe('sortClasses', () => {
       '大二下': [],
       '大一上': []
     }
-    const snapshot = JSON.stringify(Object.keys(input))
     sortClasses(input)
-    expect(JSON.stringify(Object.keys(input))).toBe(snapshot)
+    expect(Object.keys(input)).toEqual(['大二下', '大一上'])
   })
 })

@@ -19,8 +19,8 @@ const SEMESTER_INDEX_MAP = new Map(
  * Sorts a classes object so standard semesters appear in canonical order,
  * followed by non-standard semesters in their original insertion order.
  *
- * @param {Object} classes - Object mapping semester names to course arrays.
- * @returns {Object} A new sorted object; returns {} for invalid input.
+ * @param {Record<string, any>} classes - Object mapping semester names to course arrays.
+ * @returns {Record<string, any>} A new sorted object; returns {} for invalid input.
  */
 export function sortClasses(classes) {
   if (classes === null || classes === undefined || typeof classes !== 'object' || Array.isArray(classes)) {
@@ -33,8 +33,10 @@ export function sortClasses(classes) {
   }))
 
   entries.sort((a, b) => {
-    const indexA = SEMESTER_INDEX_MAP.get(a.entry[0])
-    const indexB = SEMESTER_INDEX_MAP.get(b.entry[0])
+    const [keyA] = a.entry
+    const [keyB] = b.entry
+    const indexA = SEMESTER_INDEX_MAP.get(keyA)
+    const indexB = SEMESTER_INDEX_MAP.get(keyB)
 
     const aIsStandard = indexA !== undefined
     const bIsStandard = indexB !== undefined
