@@ -322,4 +322,41 @@ describe('Supabase sync service', () => {
       p1: { math: { score: 80, updatedAt: 1000 } }
     })
   })
+
+  it('mergeProfiles in syncMode does not re-add remote-only profiles', async () => {
+    const { mergeProfiles } = await loadSync()
+
+    const local = [{ id: 'p1', updatedAt: 1000 }]
+    const remote = [
+      { id: 'p1', updatedAt: 2000 },
+      { id: 'p2', updatedAt: 2000 }
+    ]
+
+    const merged = mergeProfiles(local, remote, { syncMode: true })
+
+    expect(merged).toHaveLength(1)
+    expect(merged[0].id).toBe('p1')
+  })
+
+  it('mergeGrades in syncMode does not re-add remote-only courses', async () => {
+    const { mergeProfiles, mergeGrades } = await loadSync()
+
+    const localProfiles = [{ id: 'p1', updatedAt: 1000 }]
+    const remoteProfiles = [{ id: 'p1', updatedAt: 2000 }]
+    const mergedProfiles = mergeProfiles(localProfiles, remoteProfiles)
+
+    const localGrades = { p1: { math: { score: 80, updatedAt: 1000 } } }
+    const remoteGrades = {
+      p1: {
+        math: { score: 90, updatedAt: 2000 },
+        english: { score: 95, updatedAt: 2000 }
+      }
+    }
+
+    const merged = mergeGrades(localGrades, remoteGrades, mergedProfiles, { syncMode: true })
+
+    expect(merged).toEqual({
+      p1: { math: { score: 90, updatedAt: 2000 } }
+    })
+  })
 })

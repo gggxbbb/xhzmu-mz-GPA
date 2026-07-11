@@ -16,6 +16,7 @@ import { useGradesStore } from './stores/grades'
 import AppNav from './components/AppNav.vue'
 import SyncStatusBar from './components/SyncStatusBar.vue'
 import { useSync } from './composables/useSync.js'
+import { isSupabaseConfigured } from './services/supabase/config.js'
 
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
@@ -24,15 +25,26 @@ const { status: syncStatus, sync } = useSync()
 
 let syncTimeout = null
 let pendingSync = false
+let localSyncInProgress = false
+
+function canSync() {
+  return isSupabaseConfigured() && typeof navigator !== 'undefined' && navigator.onLine
+}
 
 function syncStores() {
-  if (syncStatus.value === 'syncing') {
+  if (!canSync()) {
+    return
+  }
+
+  if (syncStatus.value === 'syncing' || localSyncInProgress) {
     pendingSync = true
     return
   }
+
   pendingSync = false
   clearTimeout(syncTimeout)
   syncTimeout = setTimeout(() => {
+    localSyncInProgress = true
     sync({
       profiles: profilesStore.profiles,
       grades: gradesStore.gradesByProfile
@@ -41,9 +53,12 @@ function syncStores() {
 }
 
 const unwatchStatus = watch(syncStatus, (newStatus) => {
-  if (newStatus === 'idle' && pendingSync) {
-    pendingSync = false
-    syncStores()
+  if (newStatus === 'idle') {
+    localSyncInProgress = false
+    if (pendingSync) {
+      pendingSync = false
+      syncStores()
+    }
   }
 })
 

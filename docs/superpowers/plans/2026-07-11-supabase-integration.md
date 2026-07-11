@@ -422,6 +422,10 @@ export async function initAnonymousAuth() {
   }
 
   initPromise = (async () => {
+    if (!supabase) {
+      return { user: null, error: new Error('Supabase client is not initialized') }
+    }
+
     try {
       const { data, error } = await supabase.auth.getSession()
 
@@ -449,7 +453,14 @@ export async function initAnonymousAuth() {
     }
   })()
 
-  return initPromise
+  const result = await initPromise
+
+  // Only cache successful authentication; allow retry on transient failures.
+  if (result.error || !result.user) {
+    initPromise = null
+  }
+
+  return result
 }
 
 export function getCurrentUserId() {
@@ -664,7 +675,7 @@ function fromGradeRows(rows) {
   return grades
 }
 
-export function mergeProfiles(localProfiles, remoteProfiles) {
+export function mergeProfiles(localProfiles, remoteProfiles, { syncMode = false } = {}) {
   const localMap = new Map(localProfiles.map((p) => [p.id, p]))
   const remoteMap = new Map(remoteProfiles.map((p) => [p.id, p]))
   const mergedIds = new Set([...localMap.keys(), ...remoteMap.keys()])
@@ -675,10 +686,20 @@ export function mergeProfiles(localProfiles, remoteProfiles) {
     const remote = remoteMap.get(id)
 
     if (!local) {
-      merged.push(remote)
-    } else if (!remote) {
+      // During normal sync we do not re-add profiles that were deleted locally.
+      // Share-code recovery still uses the default behavior (syncMode = false).
+      if (!syncMode && remote) {
+        merged.push(remote)
+      }
+      continue
+    }
+
+    if (!remote) {
       merged.push(local)
-    } else if (toTimestamp(remote.updatedAt) >= toTimestamp(local.updatedAt)) {
+      continue
+    }
+
+    if (toTimestamp(remote.updatedAt) >= toTimestamp(local.updatedAt)) {
       merged.push(remote)
     } else {
       merged.push(local)
@@ -688,7 +709,7 @@ export function mergeProfiles(localProfiles, remoteProfiles) {
   return merged
 }
 
-export function mergeGrades(localGrades, remoteGrades, mergedProfiles) {
+export function mergeGrades(localGrades, remoteGrades, mergedProfiles, { syncMode = false } = {}) {
   const merged = {}
 
   for (const profile of mergedProfiles) {
@@ -705,9 +726,13 @@ export function mergeGrades(localGrades, remoteGrades, mergedProfiles) {
       const remoteGrade = extractGrade(remoteCourses[courseName])
 
       if (!localGrade) {
-        if (remoteGrade) mergedCourses[courseName] = remoteGrade
+        // During normal sync we do not re-add grades that were deleted locally.
+        if (!syncMode && remoteGrade) {
+          mergedCourses[courseName] = remoteGrade
+        }
         continue
       }
+
       if (!remoteGrade) {
         mergedCourses[courseName] = localGrade
         continue
@@ -1188,14 +1213,14 @@ export function useSync() {
       const profilesStore = useProfilesStore()
       const gradesStore = useGradesStore()
 
-      const mergedProfiles = mergeProfiles(profiles, pullResult.profiles)
-      const mergedGrades = mergeGrades(grades, pullResult.grades, mergedProfiles)
+      const mergedProfiles = mergeProfiles(profiles, pullResult.profiles, { syncMode: true })
+      const mergedGrades = mergeGrades(grades, pullResult.grades, mergedProfiles, { syncMode: true })
 
       profilesStore.load(mergedProfiles)
       gradesStore.load(mergedGrades)
 
       status.value = 'idle'
-      trackSyncCompleted('pull')
+      trackSyncCompleted('push_pull')
 
       return {
         profiles: mergedProfiles,
@@ -1704,12 +1729,14 @@ async function initializeSupabase() {
 
     const mergedProfiles = mergeProfiles(
       profilesStore.profiles,
-      pullResult.profiles
+      pullResult.profiles,
+      { syncMode: true }
     )
     const mergedGrades = mergeGrades(
       gradesStore.gradesByProfile,
       pullResult.grades,
-      mergedProfiles
+      mergedProfiles,
+      { syncMode: true }
     )
 
     profilesStore.load(mergedProfiles)
@@ -1784,6 +1811,7 @@ import { useGradesStore } from './stores/grades'
 import AppNav from './components/AppNav.vue'
 import SyncStatusBar from './components/SyncStatusBar.vue'
 import { useSync } from './composables/useSync.js'
+import { isSupabaseConfigured } from './services/supabase/config.js'
 
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
@@ -1792,15 +1820,26 @@ const { status: syncStatus, sync } = useSync()
 
 let syncTimeout = null
 let pendingSync = false
+let localSyncInProgress = false
+
+function canSync() {
+  return isSupabaseConfigured() && typeof navigator !== 'undefined' && navigator.onLine
+}
 
 function syncStores() {
-  if (syncStatus.value === 'syncing') {
+  if (!canSync()) {
+    return
+  }
+
+  if (syncStatus.value === 'syncing' || localSyncInProgress) {
     pendingSync = true
     return
   }
+
   pendingSync = false
   clearTimeout(syncTimeout)
   syncTimeout = setTimeout(() => {
+    localSyncInProgress = true
     sync({
       profiles: profilesStore.profiles,
       grades: gradesStore.gradesByProfile
@@ -1809,9 +1848,12 @@ function syncStores() {
 }
 
 const unwatchStatus = watch(syncStatus, (newStatus) => {
-  if (newStatus === 'idle' && pendingSync) {
-    pendingSync = false
-    syncStores()
+  if (newStatus === 'idle') {
+    localSyncInProgress = false
+    if (pendingSync) {
+      pendingSync = false
+      syncStores()
+    }
   }
 })
 
@@ -1933,8 +1975,9 @@ async function handleRecovered(payload) {
     profilesStore.load(mergedProfiles)
   }
 
+  let mergedGrades = gradesStore.gradesByProfile
   if (payload.grades && typeof payload.grades === 'object' && !Array.isArray(payload.grades)) {
-    const mergedGrades = mergeGrades(
+    mergedGrades = mergeGrades(
       gradesStore.gradesByProfile,
       payload.grades,
       mergedProfiles
@@ -1942,10 +1985,13 @@ async function handleRecovered(payload) {
     gradesStore.load(mergedGrades)
   }
 
-  const firstProfileId = mergedProfiles?.[0]?.id
-  if (firstProfileId) {
-    appStore.setCurrentProfileId(firstProfileId)
+  const previousId = appStore.currentProfileId
+  if (!mergedProfiles.some((p) => p.id === previousId)) {
+    appStore.setCurrentProfileId(mergedProfiles[0]?.id || 'default')
   }
+
+  // Push the merged state to the current anonymous user's cloud backup.
+  await sync({ profiles: mergedProfiles, grades: mergedGrades })
 }
 </script>
 ```

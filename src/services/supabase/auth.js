@@ -40,7 +40,14 @@ export async function initAnonymousAuth() {
     }
   })()
 
-  return initPromise
+  const result = await initPromise
+
+  // Only cache successful authentication; allow retry on transient failures.
+  if (result.error || !result.user) {
+    initPromise = null
+  }
+
+  return result
 }
 
 export function getCurrentUserId() {

@@ -118,7 +118,8 @@ export function installErrorHandlers(app) {
   if (app?.config) {
     const existingHandler = app.config.errorHandler
     app.config.errorHandler = (err, instance, info) => {
-      reportError(err, 'vue').catch(() => {})
+      const component = instance?.$options?.name || info || 'vue'
+      reportError(err, component).catch(() => {})
       if (typeof existingHandler === 'function') {
         existingHandler(err, instance, info)
       }

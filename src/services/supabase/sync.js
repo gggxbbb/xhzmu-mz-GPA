@@ -81,7 +81,7 @@ function fromGradeRows(rows) {
   return grades
 }
 
-export function mergeProfiles(localProfiles, remoteProfiles) {
+export function mergeProfiles(localProfiles, remoteProfiles, { syncMode = false } = {}) {
   const localMap = new Map(localProfiles.map((p) => [p.id, p]))
   const remoteMap = new Map(remoteProfiles.map((p) => [p.id, p]))
   const mergedIds = new Set([...localMap.keys(), ...remoteMap.keys()])
@@ -92,10 +92,19 @@ export function mergeProfiles(localProfiles, remoteProfiles) {
     const remote = remoteMap.get(id)
 
     if (!local) {
-      merged.push(remote)
-    } else if (!remote) {
+      // In sync mode we do not re-add profiles that were deleted locally.
+      if (!syncMode && remote) {
+        merged.push(remote)
+      }
+      continue
+    }
+
+    if (!remote) {
       merged.push(local)
-    } else if (toTimestamp(remote.updatedAt) >= toTimestamp(local.updatedAt)) {
+      continue
+    }
+
+    if (toTimestamp(remote.updatedAt) >= toTimestamp(local.updatedAt)) {
       merged.push(remote)
     } else {
       merged.push(local)
@@ -105,7 +114,7 @@ export function mergeProfiles(localProfiles, remoteProfiles) {
   return merged
 }
 
-export function mergeGrades(localGrades, remoteGrades, mergedProfiles) {
+export function mergeGrades(localGrades, remoteGrades, mergedProfiles, { syncMode = false } = {}) {
   const merged = {}
 
   for (const profile of mergedProfiles) {
@@ -122,9 +131,13 @@ export function mergeGrades(localGrades, remoteGrades, mergedProfiles) {
       const remoteGrade = extractGrade(remoteCourses[courseName])
 
       if (!localGrade) {
-        if (remoteGrade) mergedCourses[courseName] = remoteGrade
+        // In sync mode we do not re-add grades that were deleted locally.
+        if (!syncMode && remoteGrade) {
+          mergedCourses[courseName] = remoteGrade
+        }
         continue
       }
+
       if (!remoteGrade) {
         mergedCourses[courseName] = localGrade
         continue

@@ -113,12 +113,14 @@ async function initializeSupabase() {
 
     const mergedProfiles = mergeProfiles(
       profilesStore.profiles,
-      pullResult.profiles
+      pullResult.profiles,
+      { syncMode: true }
     )
     const mergedGrades = mergeGrades(
       gradesStore.gradesByProfile,
       pullResult.grades,
-      mergedProfiles
+      mergedProfiles,
+      { syncMode: true }
     )
 
     profilesStore.load(mergedProfiles)

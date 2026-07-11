@@ -69,6 +69,8 @@ const gradesStore = useGradesStore()
 const { sync, status, lastError } = useSync()
 const { trackShareCodeRecovered } = useAnalytics()
 
+const currentProfileId = computed(() => appStore.currentProfileId)
+
 const showShare = ref(false)
 const showRecover = ref(false)
 
@@ -95,8 +97,9 @@ async function handleRecovered(payload) {
     profilesStore.load(mergedProfiles)
   }
 
+  let mergedGrades = gradesStore.gradesByProfile
   if (payload.grades && typeof payload.grades === 'object' && !Array.isArray(payload.grades)) {
-    const mergedGrades = mergeGrades(
+    mergedGrades = mergeGrades(
       gradesStore.gradesByProfile,
       payload.grades,
       mergedProfiles
@@ -104,12 +107,16 @@ async function handleRecovered(payload) {
     gradesStore.load(mergedGrades)
   }
 
-  const firstProfileId = mergedProfiles?.[0]?.id
-  if (firstProfileId) {
-    appStore.setCurrentProfileId(firstProfileId)
+  const previousId = currentProfileId.value
+  if (!mergedProfiles.some((p) => p.id === previousId)) {
+    appStore.setCurrentProfileId(mergedProfiles[0]?.id || 'default')
   }
 
   trackShareCodeRecovered()
+
+  // Push the merged state to the current anonymous user's cloud backup.
+  await sync({ profiles: mergedProfiles, grades: mergedGrades })
+
   showRecover.value = false
 }
 </script>

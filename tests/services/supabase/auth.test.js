@@ -140,4 +140,31 @@ describe('Anonymous authentication service', () => {
     expect(getCurrentUserId()).toBeNull()
     expect(isAuthenticated()).toBe(false)
   })
+
+  it('retries anonymous sign-in after a failure', async () => {
+    const signInError = new Error('anonymous sign-in failed')
+    const anonymousUser = { id: 'anonymous-user-id' }
+
+    getSessionMock.mockResolvedValue({
+      data: { session: null },
+      error: null
+    })
+    signInAnonymouslyMock
+      .mockResolvedValueOnce({ data: { user: null }, error: signInError })
+      .mockResolvedValueOnce({ data: { user: anonymousUser }, error: null })
+
+    const { initAnonymousAuth, getCurrentUserId } = await import(
+      '../../../src/services/supabase/auth.js'
+    )
+
+    const first = await initAnonymousAuth()
+    expect(first.error).toBe(signInError)
+    expect(getCurrentUserId()).toBeNull()
+
+    const second = await initAnonymousAuth()
+    expect(second.error).toBeNull()
+    expect(second.user).toBe(anonymousUser)
+    expect(getCurrentUserId()).toBe('anonymous-user-id')
+    expect(signInAnonymouslyMock).toHaveBeenCalledTimes(2)
+  })
 })

@@ -47,14 +47,14 @@ export function useSync() {
       const profilesStore = useProfilesStore()
       const gradesStore = useGradesStore()
 
-      const mergedProfiles = mergeProfiles(profiles, pullResult.profiles)
-      const mergedGrades = mergeGrades(grades, pullResult.grades, mergedProfiles)
+      const mergedProfiles = mergeProfiles(profiles, pullResult.profiles, { syncMode: true })
+      const mergedGrades = mergeGrades(grades, pullResult.grades, mergedProfiles, { syncMode: true })
 
       profilesStore.load(mergedProfiles)
       gradesStore.load(mergedGrades)
 
       status.value = 'idle'
-      trackSyncCompleted('pull')
+      trackSyncCompleted('push_pull')
 
       return {
         profiles: mergedProfiles,
