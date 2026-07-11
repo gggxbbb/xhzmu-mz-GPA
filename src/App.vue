@@ -30,7 +30,7 @@ function syncStores() {
   syncTimeout = setTimeout(() => {
     sync({
       profiles: profilesStore.profiles,
-      grades: gradesStore.gradesByProfile.value
+      grades: gradesStore.gradesByProfile
     })
   }, 3000)
 }

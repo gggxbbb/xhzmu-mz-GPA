@@ -6,18 +6,48 @@ const RATE_LIMIT_COUNT = 3
 
 const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
 const PHONE_RE = /(?:\+?86)?1[3-9]\d{9}/g
-// Mask likely score values while preserving line:column numbers in stack traces.
-const SCORE_RE = /(?<!:)\b(?:100|\d{1,2}(?:\.\d+)?)\b(?!:)/g
+const UUID_RE = /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g
+const TOKEN_RE = /\b(eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*)\b/g
+const SHARE_CODE_RE = /\b([A-Z0-9]{8,16})\b/g
 
 const rateLimitMap = new Map()
 let errorHandlersInstalled = false
 
+function maskScores(text) {
+  // Mask likely score values while preserving line:column markers like "foo:42:15".
+  // Implemented without regex lookbehind for Safari < 16.4 compatibility.
+  const protectedMarkers = []
+  text = text.replace(/:\d+:\d+/g, (match) => {
+    const placeholder = `__LINE_COL_${protectedMarkers.length}__`
+    protectedMarkers.push(match)
+    return placeholder
+  })
+
+  text = text.replace(/\b(?:100|\d{1,2}(?:\.\d+)?)\b/g, '[score]')
+
+  protectedMarkers.forEach((marker, index) => {
+    text = text.replace(`__LINE_COL_${index}__`, marker)
+  })
+
+  return text
+}
+
 function sanitize(text) {
   if (typeof text !== 'string') return text
-  return text
+  text = text
     .replace(EMAIL_RE, '[email]')
     .replace(PHONE_RE, '[phone]')
-    .replace(SCORE_RE, '[score]')
+    .replace(UUID_RE, '[uuid]')
+    .replace(TOKEN_RE, '[token]')
+    .replace(SHARE_CODE_RE, '[share-code]')
+    .replace(/\buser[_-]?id\s*[:=]\s*[^\s&]+/gi, '[user-id]')
+    .replace(/\bid\s*[:=]\s*[^\s&]+/gi, '[id]')
+    .replace(/\baccess[_-]?token\s*[:=]\s*[^\s&]+/gi, '[access-token]')
+    .replace(/\brefresh[_-]?token\s*[:=]\s*[^\s&]+/gi, '[refresh-token]')
+    .replace(/\b[a-z]{2}-[a-z]{2}\b/gi, (match) => (match === 'zh-CN' || match === 'en-US' ? match : '[lang]'))
+    .replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?\b/g, '[timestamp]')
+
+  return maskScores(text)
 }
 
 function pruneStaleEntries(now) {
@@ -28,16 +58,16 @@ function pruneStaleEntries(now) {
   }
 }
 
-function isRateLimited(component) {
+function isRateLimited(key) {
   const now = Date.now()
 
   pruneStaleEntries(now)
 
-  let entry = rateLimitMap.get(component)
+  let entry = rateLimitMap.get(key)
 
   if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
     entry = { count: 0, windowStart: now }
-    rateLimitMap.set(component, entry)
+    rateLimitMap.set(key, entry)
   }
 
   if (entry.count >= RATE_LIMIT_COUNT) {
@@ -49,15 +79,22 @@ function isRateLimited(component) {
 }
 
 export async function reportError(error, component = 'global') {
-  const message = sanitize(error?.message ?? String(error))
-  const stack = sanitize(error?.stack ?? null)
+  if (!supabase) {
+    return
+  }
 
-  if (isRateLimited(component)) {
+  const rawMessage = error?.message ?? String(error)
+  const rawStack = error?.stack ?? null
+  const message = sanitize(rawMessage)
+  const stack = sanitize(rawStack)
+  const url = sanitize(typeof window !== 'undefined' ? window.location.href : null)
+  const rateLimitKey = `${component}:${message}`
+
+  if (isRateLimited(rateLimitKey)) {
     return
   }
 
   const userId = getCurrentUserId()
-  const url = sanitize(typeof window !== 'undefined' ? window.location.href : null)
 
   try {
     const { error: insertError } = await supabase

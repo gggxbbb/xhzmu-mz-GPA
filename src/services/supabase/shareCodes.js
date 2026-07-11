@@ -35,6 +35,10 @@ function computeExpirationDate(ttlDays) {
 }
 
 export async function createShareCode(payload, ttlDays = 7) {
+  if (!supabase) {
+    throw new Error('Cannot create share code: Supabase client is not initialized')
+  }
+
   const userId = getCurrentUserId()
 
   if (!userId) {
@@ -79,6 +83,10 @@ export async function createShareCode(payload, ttlDays = 7) {
 }
 
 export async function getShareCodePayload(code) {
+  if (!supabase) {
+    throw new Error('Cannot retrieve share code: Supabase client is not initialized')
+  }
+
   const { data, error } = await supabase.rpc('get_share_code', { code_input: code })
 
   if (error) {

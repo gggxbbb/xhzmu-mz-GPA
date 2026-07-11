@@ -51,7 +51,8 @@ export function useSync() {
         grades,
         pullResult.grades,
         mergedProfiles,
-        profiles
+        profiles,
+        pullResult.profiles
       )
 
       profilesStore.load(mergedProfiles)

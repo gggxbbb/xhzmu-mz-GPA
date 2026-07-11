@@ -32,21 +32,21 @@ describe('Supabase client', () => {
     )
   })
 
-  it('throws when VITE_SUPABASE_URL is missing', async () => {
+  it('returns null when VITE_SUPABASE_URL is missing', async () => {
     vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', 'public-key')
     vi.stubEnv('VITE_SUPABASE_URL', '')
 
-    await expect(import('../../../src/services/supabase/client.js')).rejects.toThrow(
-      'Missing environment variable: VITE_SUPABASE_URL'
-    )
+    const { supabase } = await import('../../../src/services/supabase/client.js')
+    expect(supabase).toBeNull()
+    expect(createClientMock).not.toHaveBeenCalled()
   })
 
-  it('throws when VITE_SUPABASE_PUBLISHABLE_KEY is missing', async () => {
+  it('returns null when VITE_SUPABASE_PUBLISHABLE_KEY is missing', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co')
     vi.stubEnv('VITE_SUPABASE_PUBLISHABLE_KEY', '')
 
-    await expect(import('../../../src/services/supabase/client.js')).rejects.toThrow(
-      'Missing environment variable: VITE_SUPABASE_PUBLISHABLE_KEY'
-    )
+    const { supabase } = await import('../../../src/services/supabase/client.js')
+    expect(supabase).toBeNull()
+    expect(createClientMock).not.toHaveBeenCalled()
   })
 })

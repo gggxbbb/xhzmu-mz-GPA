@@ -100,7 +100,7 @@ async function initializeSupabase() {
     // back into the local stores using last-write-wins on updatedAt.
     const pushResult = await pushState({
       profiles: profilesStore.profiles,
-      grades: gradesStore.gradesByProfile.value
+      grades: gradesStore.gradesByProfile
     })
     if (pushResult?.error) {
       throw pushResult.error
@@ -116,10 +116,11 @@ async function initializeSupabase() {
       pullResult.profiles
     )
     const mergedGrades = mergeGrades(
-      gradesStore.gradesByProfile.value,
+      gradesStore.gradesByProfile,
       pullResult.grades,
       mergedProfiles,
-      profilesStore.profiles
+      profilesStore.profiles,
+      pullResult.profiles
     )
 
     profilesStore.load(mergedProfiles)

@@ -9,6 +9,10 @@ export async function initAnonymousAuth() {
   }
 
   initPromise = (async () => {
+    if (!supabase) {
+      return { user: null, error: new Error('Supabase client is not initialized') }
+    }
+
     try {
       const { data, error } = await supabase.auth.getSession()
 

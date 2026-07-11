@@ -89,6 +89,10 @@ export async function flush() {
     return
   }
 
+  if (!supabase) {
+    return
+  }
+
   const userId = getCurrentUserId()
   if (!userId) {
     queue.unshift(...eventsToFlush)

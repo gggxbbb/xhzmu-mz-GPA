@@ -76,7 +76,7 @@ export function mergeProfiles(localProfiles, remoteProfiles) {
       merged.push(remote)
     } else if (!remote) {
       merged.push(local)
-    } else if (toTimestamp(remote.updatedAt) > toTimestamp(local.updatedAt)) {
+    } else if (toTimestamp(remote.updatedAt) >= toTimestamp(local.updatedAt)) {
       merged.push(remote)
     } else {
       merged.push(local)
@@ -86,16 +86,24 @@ export function mergeProfiles(localProfiles, remoteProfiles) {
   return merged
 }
 
-export function mergeGrades(localGrades, remoteGrades, mergedProfiles, localProfiles) {
+export function mergeGrades(
+  localGrades,
+  remoteGrades,
+  mergedProfiles,
+  localProfiles,
+  remoteProfiles
+) {
   const localProfileMap = new Map(localProfiles.map((p) => [p.id, p]))
+  const remoteProfileMap = new Map(remoteProfiles.map((p) => [p.id, p]))
   const merged = {}
 
   for (const profile of mergedProfiles) {
     const local = localProfileMap.get(profile.id)
+    const remote = remoteProfileMap.get(profile.id)
     const localTs = local ? toTimestamp(local.updatedAt) : 0
-    const remoteTs = toTimestamp(profile.updatedAt)
+    const remoteTs = remote ? toTimestamp(remote.updatedAt) : 0
 
-    if (remoteTs > localTs) {
+    if (remoteTs >= localTs) {
       merged[profile.id] = remoteGrades[profile.id] ?? {}
     } else {
       merged[profile.id] = localGrades[profile.id] ?? {}
@@ -106,6 +114,10 @@ export function mergeGrades(localGrades, remoteGrades, mergedProfiles, localProf
 }
 
 export async function pushState({ profiles = [], grades = {} } = {}) {
+  if (!supabase) {
+    return { error: new Error('Supabase client is not initialized') }
+  }
+
   const userId = getCurrentUserId()
   if (!userId) {
     return { error: new Error('User not authenticated') }
@@ -137,6 +149,14 @@ export async function pushState({ profiles = [], grades = {} } = {}) {
 }
 
 export async function pullState() {
+  if (!supabase) {
+    return {
+      profiles: [],
+      grades: {},
+      error: new Error('Supabase client is not initialized')
+    }
+  }
+
   const userId = getCurrentUserId()
   if (!userId) {
     return {
