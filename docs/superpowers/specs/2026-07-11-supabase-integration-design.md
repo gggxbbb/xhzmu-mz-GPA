@@ -323,8 +323,8 @@ with check (auth.uid() = user_id);
 
 ### 9.3 API Key 管理
 
-- `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_ANON_KEY` 通过 `.env` 注入构建。
-- `ANON_KEY` 可公开，因为 RLS 已限制数据访问。
+- `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_PUBLISHABLE_KEY` 通过 `.env` 注入构建。
+- `PUBLISHABLE_KEY`（旧称 `ANON_KEY`）可公开，因为 RLS 已限制数据访问。
 - `service_role_key` 绝不暴露给客户端。
 
 ---
@@ -402,8 +402,10 @@ supabase/
 ```bash
 # .env / .env.example
 VITE_SUPABASE_URL=https://<project>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon-key>
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 ```
+
+> 注：Supabase 新版控制台中客户端 API key 已改称为 **Publishable key**（旧版项目可能仍显示为 `anon key`）。两者作用相同，都是可在前端公开的 RLS 受限 key。
 
 ### 12.3 本地开发流程
 
