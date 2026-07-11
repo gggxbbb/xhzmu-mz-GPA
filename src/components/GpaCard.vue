@@ -6,7 +6,7 @@
         {{ formattedGPA }}
       </div>
       <div style="font-size: 0.85rem; opacity: 0.9;">
-        目标 {{ targetGPA }} · {{ diffText }}
+        目标 {{ targetGpa }} · {{ diffText }}
       </div>
     </div>
   </div>
@@ -18,13 +18,13 @@ import { useAppStore } from '../stores/app'
 
 const props = defineProps({
   gpa: { type: Number, required: true },
-  targetGPA: { type: Number, default: 0 }
+  targetGpa: { type: Number, default: 0 }
 })
 
 const appStore = useAppStore()
 
 const safeGPA = computed(() => Number.isFinite(props.gpa) ? props.gpa : 0)
-const safeTarget = computed(() => Number.isFinite(props.targetGPA) ? props.targetGPA : 0)
+const safeTarget = computed(() => Number.isFinite(props.targetGpa) ? props.targetGpa : 0)
 
 const formattedGPA = computed(() => {
   const decimals = appStore.showVeryLongGPA ? 5 : (Math.abs(safeGPA.value - safeTarget.value) < 0.01 ? 3 : 2)

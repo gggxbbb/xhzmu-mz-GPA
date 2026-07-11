@@ -7,7 +7,7 @@
     >
       <span style="font-weight: bold;">{{ semester }}</span>
       <span style="font-size: 0.85rem; color: var(--muted);">
-        {{ expanded ? '▼' : '▶' }} GPA {{ Number.isFinite(semesterGPA) ? semesterGPA.toFixed(2) : '0.00' }}
+        {{ expanded ? '▼' : '▶' }} GPA {{ Number.isFinite(semesterGpa) ? semesterGpa.toFixed(2) : '0.00' }}
       </span>
     </button>
     <div v-if="expanded" style="padding: 0 0.8rem;">
@@ -36,7 +36,7 @@ const props = defineProps({
   courses: Array,
   grades: Object,
   allCourses: Array,
-  semesterGPA: { type: Number, default: 0 }
+  semesterGpa: { type: Number, default: 0 }
 })
 
 const emit = defineEmits(['updateGrade', 'toggleWhatIf'])

@@ -18,14 +18,14 @@ import { ChartJS } from '../plugins/chart.js'
 const GPA_MAX = 5
 
 const props = defineProps({
-  semesterGPAs: Object
+  semesterGpas: Object
 })
 
 const chartData = computed(() => ({
-  labels: Object.keys(props.semesterGPAs),
+  labels: Object.keys(props.semesterGpas),
   datasets: [{
     label: '学期 GPA',
-    data: Object.values(props.semesterGPAs),
+    data: Object.values(props.semesterGpas),
     backgroundColor: '#66ccff',
     borderRadius: 4
   }]

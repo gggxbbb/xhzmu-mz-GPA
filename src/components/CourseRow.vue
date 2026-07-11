@@ -46,17 +46,17 @@ const props = defineProps({
   isActive: Boolean
 })
 
-const emit = defineEmits(['update:grade', 'toggleWhatIf'])
+const emit = defineEmits(['updateGrade', 'toggleWhatIf'])
 
 function onInput(event) {
   const value = event.target.value
   if (value === '') {
-    emit('update:grade', props.course.name, '')
+    emit('updateGrade', props.course.name, '')
     return
   }
   const number = Number(value)
   if (!Number.isNaN(number) && number >= 0 && number <= 100) {
-    emit('update:grade', props.course.name, number)
+    emit('updateGrade', props.course.name, number)
   }
 }
 

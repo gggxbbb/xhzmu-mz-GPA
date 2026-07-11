@@ -27,11 +27,11 @@ const props = defineProps({
   remainingCredits: { type: Number, default: 0 },
   enteredCount: { type: Number, default: 0 },
   totalCount: { type: Number, default: 0 },
-  semesterGPAs: { type: Object, default: () => ({}) }
+  semesterGpas: { type: Object, default: () => ({}) }
 })
 
 const highestSemesterGPA = computed(() => {
-  const values = Object.values(props.semesterGPAs || {})
+  const values = Object.values(props.semesterGpas || {})
   if (values.length === 0) return 0
   return Math.max(...values)
 })
