@@ -360,7 +360,7 @@ describe('auth', () => {
       data: { session: { user: { id: 'u1' } } },
       error: null
     })
-    const user = await initAnonymousAuth()
+    const { user } = await initAnonymousAuth()
     expect(user.id).toBe('u1')
     expect(signInAnonymouslyMock).not.toHaveBeenCalled()
   })
@@ -371,7 +371,7 @@ describe('auth', () => {
       data: { user: { id: 'u2' }, session: { user: { id: 'u2' } } },
       error: null
     })
-    const user = await initAnonymousAuth()
+    const { user } = await initAnonymousAuth()
     expect(user.id).toBe('u2')
     expect(signInAnonymouslyMock).toHaveBeenCalled()
   })
@@ -398,34 +398,50 @@ Create `src/services/supabase/auth.js`:
 import { supabase } from './client.js'
 
 let currentUser = null
+let initPromise = null
 
 export async function initAnonymousAuth() {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-  if (sessionError) {
-    console.error('Failed to get Supabase session', sessionError)
+  if (initPromise) {
+    return initPromise
   }
 
-  if (session?.user) {
-    currentUser = session.user
-    return currentUser
-  }
+  initPromise = (async () => {
+    try {
+      const { data, error } = await supabase.auth.getSession()
 
-  const { data, error } = await supabase.auth.signInAnonymously()
-  if (error) {
-    console.error('Anonymous sign-in failed', error)
-    return null
-  }
+      if (error) {
+        console.error('Failed to retrieve session:', error)
+      }
 
-  currentUser = data.user
-  return currentUser
+      if (data?.session?.user) {
+        currentUser = data.session.user
+        return { user: currentUser, error: null }
+      }
+
+      const { data: signInData, error: signInError } = await supabase.auth.signInAnonymously()
+
+      if (signInError) {
+        console.error('Failed to sign in anonymously:', signInError)
+        return { user: null, error: signInError }
+      }
+
+      currentUser = signInData?.user ?? null
+      return { user: currentUser, error: null }
+    } catch (err) {
+      console.error('Unexpected error during anonymous auth initialization:', err)
+      return { user: null, error: err }
+    }
+  })()
+
+  return initPromise
 }
 
 export function getCurrentUserId() {
-  return currentUser?.id || null
+  return currentUser?.id ?? null
 }
 
 export function isAuthenticated() {
-  return !!currentUser?.id
+  return currentUser !== null
 }
 ```
 
@@ -956,7 +972,11 @@ export function useSupabaseAuth() {
   onMounted(async () => {
     if (ready.value) return
     try {
-      const user = await initAnonymousAuth()
+      const { user, error: authError } = await initAnonymousAuth()
+      if (authError) {
+        error.value = authError
+        console.error('Supabase auth init failed', authError)
+      }
       userId.value = user?.id || getCurrentUserId()
     } catch (e) {
       error.value = e
@@ -1478,7 +1498,12 @@ function initializeState() {
 
 async function initializeSupabase() {
   try {
-    await initAnonymousAuth()
+    const { user, error: authError } = await initAnonymousAuth()
+    if (authError || !user) {
+      console.error('Supabase auth initialization failed', authError)
+      return
+    }
+
     const profilesStore = useProfilesStore()
     const gradesStore = useGradesStore()
 
