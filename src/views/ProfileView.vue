@@ -53,7 +53,7 @@ import { computed, ref } from 'vue'
 import { useAppStore } from '../stores/app'
 import { useProfilesStore } from '../stores/profiles'
 import { useGradesStore } from '../stores/grades'
-import { useSync } from '../composables/useSync'
+import { syncNow, status, lastError } from '../engine/syncEngine.js'
 import { useAnalytics } from '../composables/useAnalytics'
 import ProfileSwitcher from '../components/ProfileSwitcher.vue'
 import CourseConfigEditor from '../components/CourseConfigEditor.vue'
@@ -66,7 +66,6 @@ import RecoverDialog from '../components/RecoverDialog.vue'
 const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
-const { sync, status, lastError, isApplying } = useSync()
 const { trackShareCodeRecovered } = useAnalytics()
 
 const currentProfileId = computed(() => appStore.currentProfileId)
@@ -82,16 +81,10 @@ const sharePayload = computed(() => ({
 const syncing = computed(() => status.value === 'syncing')
 const syncError = computed(() => lastError.value?.message || '')
 
-async function syncNow() {
-  await sync(sharePayload.value)
-}
-
 async function handleRecovered(payload) {
   if (!payload) return
 
-  const { mergeProfiles, mergeGrades } = await import('../services/supabase/sync.js')
-
-  isApplying.value = true
+  const { mergeProfiles, mergeGrades } = await import('../engine/stateMerge.js')
 
   let mergedProfiles = profilesStore.profiles
   if (Array.isArray(payload.profiles)) {
@@ -109,8 +102,6 @@ async function handleRecovered(payload) {
     gradesStore.load(mergedGrades)
   }
 
-  isApplying.value = false
-
   const previousId = currentProfileId.value
   if (!mergedProfiles.some((p) => p.id === previousId)) {
     appStore.setCurrentProfileId(mergedProfiles[0]?.id || 'default')
@@ -118,8 +109,7 @@ async function handleRecovered(payload) {
 
   trackShareCodeRecovered()
 
-  // Push the merged state to the current anonymous user's cloud backup.
-  await sync({ profiles: mergedProfiles, grades: mergedGrades })
+  await syncNow()
 
   showRecover.value = false
 }
