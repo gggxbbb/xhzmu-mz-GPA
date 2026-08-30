@@ -1,6 +1,6 @@
 <template>
-  <div class="card" style="background: #fff3f3; border-color: #ffcccc;">
-    <div style="font-weight: bold; margin-bottom: 0.8rem; color: #c33;">危险操作</div>
+  <div class="card" style="background: var(--danger-soft); border-color: var(--danger-border);">
+    <div style="font-weight: bold; margin-bottom: 0.8rem; color: var(--danger-strong);">危险操作</div>
     <div style="display: flex; flex-direction: column; gap: 0.5rem;">
       <button class="btn btn-danger" @click="clearGrades">仅清除成绩</button>
       <button class="btn btn-danger" @click="clearAll">清除所有本地数据</button>

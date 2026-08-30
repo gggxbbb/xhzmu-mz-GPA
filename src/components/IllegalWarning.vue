@@ -2,7 +2,7 @@
   <div
     v-if="courses.length > 0"
     class="card"
-    style="background: #fff3f3; border-color: #ffcccc; color: #c33;"
+    style="background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger-strong);"
     role="alert"
     aria-live="polite"
   >

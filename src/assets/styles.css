@@ -17,6 +17,10 @@
   --border: #dddddd;
   --accent-soft: #e8f5e9;
   --accent-strong: #2e7d32;
+  --accent-border: #c8e6c9;
+  --danger-soft: #fff3f3;
+  --danger-strong: #cc3333;
+  --danger-border: #ffcccc;
 }
 
 [data-theme="dark"] {
@@ -27,6 +31,10 @@
   --border: #333844;
   --accent-soft: rgba(76, 175, 80, 0.16);
   --accent-strong: #81c784;
+  --accent-border: rgba(129, 199, 132, 0.35);
+  --danger-soft: rgba(244, 67, 54, 0.12);
+  --danger-strong: #ef9a9a;
+  --danger-border: rgba(239, 154, 154, 0.35);
 }
 
 * {
