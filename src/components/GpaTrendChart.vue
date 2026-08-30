@@ -14,12 +14,15 @@
 import { computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { ChartJS } from '../plugins/chart.js'
+import { useAppStore } from '../stores/app'
 
 const GPA_MAX = 5
 
 const props = defineProps({
   semesterGpas: Object
 })
+
+const appStore = useAppStore()
 
 const chartData = computed(() => ({
   labels: Object.keys(props.semesterGpas),
@@ -31,11 +34,19 @@ const chartData = computed(() => ({
   }]
 }))
 
-const chartOptions = {
-  responsive: true,
-  plugins: { legend: { display: false } },
-  scales: {
-    y: { min: 0, max: GPA_MAX }
+const chartOptions = computed(() => {
+  const dark = appStore.isDark
+  const axis = {
+    ticks: { color: dark ? '#f0f0f0' : '#1a1a1a' },
+    grid: { color: dark ? '#333844' : '#dddddd' }
   }
-}
+  return {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: axis,
+      y: { ...axis, min: 0, max: GPA_MAX }
+    }
+  }
+})
 </script>

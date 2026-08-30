@@ -14,10 +14,13 @@
 import { computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { ChartJS } from '../plugins/chart.js'
+import { useAppStore } from '../stores/app'
 
 const props = defineProps({
   grades: Object
 })
+
+const appStore = useAppStore()
 
 const distribution = computed(() => {
   const buckets = { '90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '<60': 0 }
@@ -42,9 +45,19 @@ const chartData = computed(() => ({
   }]
 }))
 
-const chartOptions = {
-  responsive: true,
-  plugins: { legend: { display: false } },
-  scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-}
+const chartOptions = computed(() => {
+  const dark = appStore.isDark
+  const axis = {
+    ticks: { color: dark ? '#f0f0f0' : '#1a1a1a' },
+    grid: { color: dark ? '#333844' : '#dddddd' }
+  }
+  return {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: axis,
+      y: { ...axis, beginAtZero: true, ticks: { ...axis.ticks, stepSize: 1 } }
+    }
+  }
+})
 </script>

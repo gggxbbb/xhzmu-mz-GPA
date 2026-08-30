@@ -9,13 +9,14 @@
   --nav-height: 64px;
 }
 
-:root,
-[data-theme="light"] {
+:root {
   --bg: #ffffff;
   --surface: #f5f5f5;
   --text: #1a1a1a;
   --muted: #666666;
   --border: #dddddd;
+  --accent-soft: #e8f5e9;
+  --accent-strong: #2e7d32;
 }
 
 [data-theme="dark"] {
@@ -24,6 +25,8 @@
   --text: #f0f0f0;
   --muted: #a0a0a0;
   --border: #333844;
+  --accent-soft: rgba(76, 175, 80, 0.16);
+  --accent-strong: #81c784;
 }
 
 * {

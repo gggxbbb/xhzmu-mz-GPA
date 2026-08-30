@@ -8,10 +8,6 @@ import { migrateLegacyData, hasLegacyData } from './utils/migration'
 import { useAppStore } from './stores/app'
 import { useProfilesStore } from './stores/profiles'
 import { useGradesStore } from './stores/grades'
-import { useAnalytics } from './composables/useAnalytics.js'
-import { startSyncEngine, syncNow } from './engine/syncEngine.js'
-import { createConfiguredSyncAdapter } from './adapters/supabaseSyncAdapter.js'
-import { isSupabaseConfigured } from './services/supabase/config.js'
 
 const pinia = createPinia()
 const app = createApp(App)
@@ -19,7 +15,13 @@ const app = createApp(App)
 app.use(pinia)
 app.use(router)
 
-function initializeState({ flushAnalytics } = {}) {
+function purgeLegacySupabaseSessions() {
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith('sb-')) localStorage.removeItem(key)
+  }
+}
+
+function initializeState() {
   const appStore = useAppStore()
   const profilesStore = useProfilesStore()
   const gradesStore = useGradesStore()
@@ -57,59 +59,12 @@ function initializeState({ flushAnalytics } = {}) {
     })
   }
 
-  const unsubApp = appStore.$subscribe(save)
-  const unsubProfiles = profilesStore.$subscribe(save)
-  const unsubGrades = gradesStore.$subscribe(save)
+  appStore.$subscribe(save)
+  profilesStore.$subscribe(save)
+  gradesStore.$subscribe(save)
   save()
-
-  window.addEventListener('beforeunload', () => {
-    unsubApp()
-    unsubProfiles()
-    unsubGrades()
-    flushAnalytics?.().catch((err) =>
-      console.error('Failed to flush analytics on unload:', err)
-    )
-  })
 }
 
-async function startCloudSync() {
-  const profilesStore = useProfilesStore()
-  const gradesStore = useGradesStore()
-  const adapter = createConfiguredSyncAdapter()
-
-  startSyncEngine({
-    stores: { profilesStore, gradesStore },
-    adapter
-  })
-
-  syncNow()
-}
-
-async function bootstrap() {
-  if (isSupabaseConfigured()) {
-    const [{ installErrorHandlers }, { flush }] = await Promise.all([
-      import('./services/supabase/errorReporter.js'),
-      import('./services/supabase/analytics.js')
-    ])
-
-    installErrorHandlers(app)
-
-    const { trackPageView } = useAnalytics()
-    router.afterEach((to) => trackPageView(to.path, to.name ?? to.path))
-
-    initializeState({ flushAnalytics: flush })
-    app.mount('#app')
-    await startCloudSync()
-  } else {
-    console.warn(
-      'Supabase environment variables are missing; running without cloud sync.'
-    )
-    initializeState()
-    app.mount('#app')
-    startCloudSync()
-  }
-}
-
-bootstrap().catch((err) => {
-  console.error('Bootstrap failed:', err)
-})
+purgeLegacySupabaseSessions()
+initializeState()
+app.mount('#app')

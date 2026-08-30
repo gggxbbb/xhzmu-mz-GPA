@@ -1,5 +1,7 @@
 # SyncEngine module and SyncPort adapter
 
+**状态**：已被 [ADR-0002](./0002-remove-cloud-sync.md) 取代——整个云同步层已移除。
+
 ## Context
 
 Cloud-sync scheduling and execution were spread across `App.vue` (debounce, online/offline, visibilitychange, pending-sync queue), `main.js` (store loading, migration, Supabase authentication), and `src/services/supabase/sync.js` (DB row mapping, push/pull, and domain merge logic). The seam was hidden inside Supabase-specific modules, so the sync policy could not be tested without mocking Supabase internals.

@@ -1,22 +1,34 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
+
+const THEME_COLORS = { light: '#66ccff', dark: '#13171f' }
 
 export const useAppStore = defineStore('app', () => {
   const showVeryLongGPA = ref(false)
   const theme = ref('auto')
   const currentProfileId = ref('default')
 
-  const resolveDark = () => {
+  const systemDark = ref(window.matchMedia('(prefers-color-scheme: dark)').matches)
+  window
+    .matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', (event) => {
+      systemDark.value = event.matches
+    })
+
+  const isDark = computed(() => {
     if (theme.value === 'dark') return true
     if (theme.value === 'light') return false
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
+    return systemDark.value
+  })
+
+  function applyTheme() {
+    const value = isDark.value ? 'dark' : 'light'
+    document.documentElement.dataset.theme = value
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', THEME_COLORS[value])
   }
 
-  const isDark = ref(resolveDark())
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-  mediaQuery.addEventListener('change', () => {
-    isDark.value = resolveDark()
-  })
+  watch(isDark, applyTheme, { immediate: true, flush: 'sync' })
 
   function setShowVeryLongGPA(value) {
     showVeryLongGPA.value = value

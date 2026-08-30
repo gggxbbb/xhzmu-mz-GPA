@@ -27,13 +27,12 @@
 </template>
 
 <script setup>
-import { computed, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { useAppStore } from '../stores/app'
 import { useProfilesStore } from '../stores/profiles'
 import { useGradesStore } from '../stores/grades'
 import { useUIStore } from '../stores/ui'
 import { useGPA } from '../composables/useGPA'
-import { useAnalytics } from '../composables/useAnalytics'
 import { sortClasses } from '../utils/semesterSort'
 import GpaCard from '../components/GpaCard.vue'
 import StatChips from '../components/StatChips.vue'
@@ -45,7 +44,6 @@ const appStore = useAppStore()
 const profilesStore = useProfilesStore()
 const gradesStore = useGradesStore()
 const uiStore = useUIStore()
-const { trackGradeEntered } = useAnalytics()
 
 const currentProfile = computed(() => profilesStore.getProfile(appStore.currentProfileId))
 const currentGrades = computed(() => gradesStore.getGrades(appStore.currentProfileId))
@@ -69,18 +67,7 @@ const filteredClasses = computed(() => {
 
 const hasFilteredClasses = computed(() => Object.keys(filteredClasses.value).length > 0)
 
-let gradeTrackTimeout = null
-
 function onUpdateGrade(courseName, value) {
   gradesStore.setGrade(appStore.currentProfileId, courseName, value)
-
-  clearTimeout(gradeTrackTimeout)
-  gradeTrackTimeout = setTimeout(() => {
-    trackGradeEntered(gpa.enteredCourses.value.length)
-  }, 2000)
 }
-
-onUnmounted(() => {
-  clearTimeout(gradeTrackTimeout)
-})
 </script>
