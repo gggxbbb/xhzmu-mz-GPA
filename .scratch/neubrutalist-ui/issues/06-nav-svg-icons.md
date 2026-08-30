@@ -4,9 +4,13 @@
 
 **Blocked by:** 02 — `.neo-*` 签名类 + 清除组件内联样式
 
-**Status:** claimed
+**Status:** resolved
 
 - [ ] 三个 tab 图标均为内联 SVG，粗描边，颜色来自 `--ink`
 - [ ] 「我的」图标为人形语义
 - [ ] 激活态在双主题下清晰可辨
 - [ ] 无障碍：`aria-current` 等现有语义保留
+
+## Comments
+
+已由 subagent 完成：emoji 换粗描边内联 SVG（stroke-width 3、currentColor 随 --ink 翻转），我的=人形，aria-current 保留，双主题冒烟通过。
