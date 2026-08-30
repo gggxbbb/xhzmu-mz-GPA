@@ -1,16 +1,54 @@
 <template>
-  <div class="card" style="background: linear-gradient(135deg, var(--brand), var(--brand-dark)); color: white; border: none;">
-    <div style="text-align: center;">
-      <div style="font-size: 0.9rem; opacity: 0.9;">当前学位绩点</div>
-      <div class="gpa-display" :class="{ 'below-target': isBelowTarget }" style="margin: 0.5rem 0;">
+  <div class="neo-card neo-card--accent">
+    <div class="gpa-hero">
+      <div class="gpa-hero-label">当前学位绩点</div>
+      <div class="gpa-display" :class="{ 'below-target': isBelowTarget }">
         {{ formattedGPA }}
       </div>
-      <div style="font-size: 0.85rem; opacity: 0.9;">
-        目标 {{ targetGpa }} · {{ diffText }}
+      <div class="gpa-hero-sub">
+        目标 <span class="gpa-target">{{ formattedTarget }}</span> · {{ diffText }}
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.gpa-hero {
+  text-align: center;
+}
+
+.gpa-hero .gpa-display {
+  margin: 0.5rem 0;
+}
+.gpa-display {
+  font-family: var(--font-digits);
+  font-size: var(--text-hero);
+  font-weight: var(--weight-digits);
+  line-height: 1;
+  text-align: center;
+}
+
+.gpa-display.below-target {
+  color: var(--danger);
+}
+
+.gpa-hero-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-heading);
+}
+
+.gpa-hero-sub {
+  font-size: var(--text-base);
+  color: var(--ink-soft);
+}
+
+.gpa-target {
+  font-family: var(--font-digits);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-digits);
+  color: var(--ink);
+}
+</style>
 
 <script setup>
 import { computed } from 'vue'
@@ -30,6 +68,8 @@ const formattedGPA = computed(() => {
   const decimals = appStore.showVeryLongGPA ? 5 : (Math.abs(safeGPA.value - safeTarget.value) < 0.01 ? 3 : 2)
   return safeGPA.value.toFixed(decimals)
 })
+
+const formattedTarget = computed(() => safeTarget.value.toFixed(2))
 
 const isBelowTarget = computed(() => safeGPA.value < safeTarget.value && safeGPA.value > 0)
 

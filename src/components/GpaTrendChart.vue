@@ -1,6 +1,6 @@
 <template>
-  <section class="card" aria-labelledby="gpa-trend-title">
-    <h2 id="gpa-trend-title" style="font-size: 1rem; font-weight: bold; margin: 0 0 0.8rem 0;">学期 GPA 趋势</h2>
+  <section class="neo-card" aria-labelledby="gpa-trend-title">
+    <h2 id="gpa-trend-title" class="chart-title">学期 GPA 趋势</h2>
     <Bar
       :data="chartData"
       :options="chartOptions"
@@ -14,7 +14,7 @@
 import { computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { ChartJS } from '../plugins/chart.js'
-import { useAppStore } from '../stores/app'
+import { useThemeTokens } from '../composables/useThemeTokens.js'
 
 const GPA_MAX = 5
 
@@ -22,23 +22,26 @@ const props = defineProps({
   semesterGpas: Object
 })
 
-const appStore = useAppStore()
+const { themeTick, token } = useThemeTokens()
 
-const chartData = computed(() => ({
-  labels: Object.keys(props.semesterGpas),
-  datasets: [{
-    label: '学期 GPA',
-    data: Object.values(props.semesterGpas),
-    backgroundColor: '#66ccff',
-    borderRadius: 4
-  }]
-}))
+const chartData = computed(() => {
+  themeTick.value
+  return {
+    labels: Object.keys(props.semesterGpas),
+    datasets: [{
+      label: '学期 GPA',
+      data: Object.values(props.semesterGpas),
+      backgroundColor: token('--accent'),
+      borderRadius: 0
+    }]
+  }
+})
 
 const chartOptions = computed(() => {
-  const dark = appStore.isDark
+  themeTick.value
   const axis = {
-    ticks: { color: dark ? '#f0f0f0' : '#1a1a1a' },
-    grid: { color: dark ? '#333844' : '#dddddd' }
+    ticks: { color: token('--ink') },
+    grid: { color: token('--ink-soft') }
   }
   return {
     responsive: true,
@@ -50,3 +53,10 @@ const chartOptions = computed(() => {
   }
 })
 </script>
+<style scoped>
+.chart-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-heading);
+  margin: 0 0 0.8rem 0;
+}
+</style>

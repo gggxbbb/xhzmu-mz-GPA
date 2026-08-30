@@ -1,16 +1,16 @@
 <template>
-  <div class="card" style="padding: 0; overflow: hidden;">
+  <div class="neo-card semester-card">
     <button
       class="semester-header"
       :aria-expanded="expanded"
       @click="uiStore.toggleSemester(semester)"
     >
-      <span style="font-weight: bold;">{{ semester }}</span>
-      <span style="font-size: 0.85rem; color: var(--muted);">
+      <span class="semester-title">{{ semester }}</span>
+      <span class="semester-gpa">
         {{ expanded ? '▼' : '▶' }} GPA {{ Number.isFinite(semesterGpa) ? semesterGpa.toFixed(2) : '0.00' }}
       </span>
     </button>
-    <div v-if="expanded" style="padding: 0 0.8rem;">
+    <div v-if="expanded" class="semester-body">
       <CourseRow
         v-for="course in courses"
         :key="course.name"
@@ -45,3 +45,40 @@ const uiStore = useUIStore()
 
 const expanded = computed(() => uiStore.expandedSemesters.has(props.semester))
 </script>
+<style scoped>
+.semester-card {
+  padding: 0;
+  overflow: hidden;
+}
+.semester-header {
+  width: 100%;
+  padding: 0.8rem;
+  background: var(--surface);
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.semester-header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.semester-title {
+  font-weight: var(--weight-heading);
+}
+
+.semester-gpa {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.semester-body {
+  padding: 0 0.8rem;
+}
+</style>

@@ -1,6 +1,11 @@
 <template>
   <div v-if="currentProfile">
     <GpaCard :gpa="gpa.currentGPA.value" :target-gpa="currentProfile.targetGPA" />
+    <TargetAnalysisCard
+      :current-gpa="gpa.currentGPA.value"
+      :required-average="gpa.requiredAverageForTarget.value"
+      :predicted="gpa.predictedGPA"
+    />
     <StatChips
       :total-credits="gpa.totalCredits.value"
       :entered-count="gpa.enteredCourses.value.length"
@@ -19,11 +24,11 @@
       @update-grade="onUpdateGrade"
       @toggle-what-if="uiStore.setActiveWhatIfCourse"
     />
-    <div v-if="!hasFilteredClasses" style="text-align: center; color: var(--muted); padding: 2rem;">
+    <div v-if="!hasFilteredClasses" class="empty-state">
       未找到匹配课程
     </div>
   </div>
-  <div v-else class="card" style="text-align: center;">加载中...</div>
+  <div v-else class="neo-card loading-state">加载中...</div>
 </template>
 
 <script setup>
@@ -35,6 +40,7 @@ import { useUIStore } from '../stores/ui'
 import { useGPA } from '../composables/useGPA'
 import { sortClasses } from '../utils/semesterSort'
 import GpaCard from '../components/GpaCard.vue'
+import TargetAnalysisCard from '../components/TargetAnalysisCard.vue'
 import StatChips from '../components/StatChips.vue'
 import SearchBar from '../components/SearchBar.vue'
 import SemesterItem from '../components/SemesterItem.vue'
@@ -71,3 +77,14 @@ function onUpdateGrade(courseName, value) {
   gradesStore.setGrade(appStore.currentProfileId, courseName, value)
 }
 </script>
+<style scoped>
+.empty-state {
+  text-align: center;
+  color: var(--ink-soft);
+  padding: 2rem;
+}
+
+.loading-state {
+  text-align: center;
+}
+</style>

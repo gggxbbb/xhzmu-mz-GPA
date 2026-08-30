@@ -1,13 +1,30 @@
 <template>
-  <div class="card">
-    <div style="font-weight: bold; margin-bottom: 0.8rem;">数据备份</div>
-    <div style="display: flex; gap: 0.5rem;">
-      <button class="btn" style="flex: 1;" @click="importData">导入 JSON</button>
-      <button class="btn btn-primary" style="flex: 1;" @click="exportData">导出备份</button>
+  <div class="neo-card">
+    <div class="backup-title">数据备份</div>
+    <div class="backup-actions">
+      <button class="neo-btn" @click="importData">导入 JSON</button>
+      <button class="neo-btn neo-btn--primary" @click="exportData">导出备份</button>
     </div>
-    <input ref="fileInput" type="file" accept=".json" style="display: none;" @change="onFileSelected">
+    <input ref="fileInput" type="file" accept=".json" class="visually-hidden" @change="onFileSelected">
   </div>
 </template>
+
+<style scoped>
+.backup-title {
+  font-weight: var(--weight-heading);
+  font-size: var(--text-lg);
+  margin-bottom: 0.8rem;
+}
+
+.backup-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.backup-actions .neo-btn {
+  flex: 1;
+}
+</style>
 
 <script setup>
 import { ref } from 'vue'

@@ -1,14 +1,39 @@
 <template>
-  <section class="card" style="background: linear-gradient(135deg, var(--brand), var(--brand-dark)); color: white; border: none;">
-    <div style="text-align: center;">
-      <div style="font-size: 2.8rem; font-weight: bold;">{{ gpa.toFixed(2) }}</div>
-      <div style="font-size: 0.9rem; opacity: 0.9;">当前 GPA · 目标 {{ targetGpa }}</div>
-      <div style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid rgba(255,255,255,0.3); font-size: 0.85rem;">
+  <section class="neo-card neo-card--accent">
+    <div class="gpa-summary">
+      <div class="gpa-summary-value">{{ gpa.toFixed(2) }}</div>
+      <div class="gpa-summary-label">当前 GPA · 目标 {{ targetGpa }}</div>
+      <div class="gpa-summary-text">
         {{ summaryText }}
       </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+.gpa-summary {
+  text-align: center;
+}
+
+.gpa-summary-value {
+  font-family: var(--font-digits);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-digits);
+  line-height: 1.1;
+}
+
+.gpa-summary-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-heading);
+}
+
+.gpa-summary-text {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 3px solid var(--ink);
+  font-size: var(--text-sm);
+}
+</style>
 
 <script setup>
 import { computed } from 'vue'

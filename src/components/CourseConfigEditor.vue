@@ -1,39 +1,128 @@
 <template>
-  <div class="card">
-    <div style="font-weight: bold; margin-bottom: 0.8rem;">编辑当前配置</div>
-    <input class="input" aria-label="档案名称" v-model="draft.name" placeholder="档案名称" style="margin-bottom: 0.6rem;">
-    <input class="input" aria-label="目标绩点" v-model.number="draft.targetGPA" placeholder="目标绩点" style="margin-bottom: 0.6rem;">
+  <div class="neo-card">
+    <div class="editor-title">编辑当前配置</div>
+    <input class="neo-input editor-field" aria-label="档案名称" v-model="draft.name" placeholder="档案名称">
+    <input class="neo-input editor-field" aria-label="目标绩点" v-model.number="draft.targetGPA" placeholder="目标绩点">
 
-    <div v-for="(courses, semester) in draft.classes" :key="semester" style="border: 1px solid var(--border); border-radius: 0.5rem; overflow: hidden; margin-bottom: 0.8rem;">
-      <div style="padding: 0.6rem; background: var(--surface); display: flex; justify-content: space-between; align-items: center;">
-        <input class="input" :aria-label="`学期名称 ${semester}`" v-model="semesterNames[semester]" style="width: 100px; font-weight: bold; background: transparent; border: none; padding: 0;" @change="renameSemester(semester, semesterNames[semester])">
-        <div style="display: flex; gap: 0.3rem;">
-          <button class="btn" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" @click="addCourse(semester)">+ 课</button>
-          <button class="btn btn-danger" aria-label="删除学期" style="padding: 0.2rem 0.4rem; font-size: 0.7rem;" @click="removeSemester(semester)">删除学期</button>
+    <div v-for="(courses, semester) in draft.classes" :key="semester" class="semester-block">
+      <div class="semester-block-header">
+        <input class="neo-input semester-name-input" :aria-label="`学期名称 ${semester}`" v-model="semesterNames[semester]" @change="renameSemester(semester, semesterNames[semester])">
+        <div class="semester-block-actions">
+          <button class="neo-btn btn-small" @click="addCourse(semester)">+ 课</button>
+          <button class="neo-btn neo-btn--danger btn-small" aria-label="删除学期" @click="removeSemester(semester)">删除学期</button>
         </div>
       </div>
-      <div style="padding: 0.6rem;">
-        <div v-for="(course, index) in courses" :key="index" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-          <input class="input" :aria-label="`课程名称 ${index + 1}`" v-model="course.name" placeholder="课程名称" style="flex: 2;">
-          <input class="input" :aria-label="`课程学分 ${index + 1}`" v-model.number="course.credit" placeholder="学分" style="flex: 1;">
-          <button class="btn btn-danger" aria-label="删除课程" style="padding: 0.2rem 0.4rem; font-size: 0.75rem;" @click="removeCourse(semester, index)">✕</button>
+      <div class="semester-block-body">
+        <div v-for="(course, index) in courses" :key="index" class="course-edit-row">
+          <input class="neo-input course-name-input" :aria-label="`课程名称 ${index + 1}`" v-model="course.name" placeholder="课程名称">
+          <input class="neo-input course-credit-input" :aria-label="`课程学分 ${index + 1}`" v-model.number="course.credit" placeholder="学分">
+          <button class="neo-btn neo-btn--danger btn-small" aria-label="删除课程" @click="removeCourse(semester, index)">✕</button>
         </div>
       </div>
     </div>
 
-    <button class="btn" style="width: 100%; margin-bottom: 0.8rem;" @click="addSemester">+ 新建学期</button>
+    <button class="neo-btn add-semester-btn" @click="addSemester">+ 新建学期</button>
 
-    <details style="font-size: 0.85rem;">
+    <details class="text-mode">
       <summary>高级：文本模式编辑</summary>
-      <textarea class="input" aria-label="文本模式编辑" v-model="textMode" rows="6" style="font-family: monospace; margin-top: 0.5rem;"></textarea>
+      <textarea class="neo-input text-mode-area" aria-label="文本模式编辑" v-model="textMode" rows="6"></textarea>
     </details>
 
-    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-      <button class="btn" style="flex: 1;" @click="reset">重置</button>
-      <button class="btn btn-primary" style="flex: 1;" @click="save">保存</button>
+    <div class="editor-actions">
+      <button class="neo-btn" @click="reset">重置</button>
+      <button class="neo-btn neo-btn--primary" @click="save">保存</button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.editor-title {
+  font-weight: var(--weight-heading);
+  margin-bottom: 0.8rem;
+}
+
+.editor-field {
+  margin-bottom: 0.6rem;
+}
+
+.semester-block {
+  border: 2px solid var(--ink);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  margin-bottom: 0.8rem;
+}
+
+.semester-block-header {
+  padding: 0.6rem;
+  background: var(--surface);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.semester-name-input {
+  width: 100px;
+  min-height: 36px;
+  font-weight: var(--weight-heading);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.semester-block-actions {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.btn-small {
+  padding: 0.2rem 0.4rem;
+  font-size: var(--text-xs);
+  min-height: 36px;
+}
+
+.semester-block-body {
+  padding: 0.6rem;
+}
+
+.course-edit-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.course-name-input {
+  flex: 2;
+}
+
+.course-credit-input {
+  flex: 1;
+}
+
+.add-semester-btn {
+  width: 100%;
+  margin-bottom: 0.8rem;
+}
+
+.text-mode {
+  font-size: var(--text-sm);
+}
+
+.text-mode-area {
+  font-family: monospace;
+  margin-top: 0.5rem;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.editor-actions .neo-btn {
+  flex: 1;
+}
+</style>
 
 <script setup>
 import { reactive, ref, watch, computed } from 'vue'

@@ -1,6 +1,6 @@
 <template>
-  <section class="card" aria-labelledby="score-distribution-title">
-    <h2 id="score-distribution-title" style="font-size: 1rem; font-weight: bold; margin: 0 0 0.8rem 0;">成绩分布</h2>
+  <section class="neo-card" aria-labelledby="score-distribution-title">
+    <h2 id="score-distribution-title" class="chart-title">成绩分布</h2>
     <Bar
       :data="chartData"
       :options="chartOptions"
@@ -14,13 +14,13 @@
 import { computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { ChartJS } from '../plugins/chart.js'
-import { useAppStore } from '../stores/app'
+import { useThemeTokens } from '../composables/useThemeTokens.js'
 
 const props = defineProps({
   grades: Object
 })
 
-const appStore = useAppStore()
+const { themeTick, token } = useThemeTokens()
 
 const distribution = computed(() => {
   const buckets = { '90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '<60': 0 }
@@ -35,21 +35,28 @@ const distribution = computed(() => {
   return buckets
 })
 
-const chartData = computed(() => ({
-  labels: Object.keys(distribution.value),
-  datasets: [{
-    label: '课程数',
-    data: Object.values(distribution.value),
-    backgroundColor: ['#4caf50', '#66ccff', '#ff9800', '#ff5722', '#f44336'],
-    borderRadius: 4
-  }]
-}))
+const chartData = computed(() => {
+  themeTick.value
+  // 及格区间统一 accent,不及格区间(<60)用 danger 标出
+  const colors = Object.keys(distribution.value).map((bucket) =>
+    bucket === '<60' ? token('--danger') : token('--accent')
+  )
+  return {
+    labels: Object.keys(distribution.value),
+    datasets: [{
+      label: '课程数',
+      data: Object.values(distribution.value),
+      backgroundColor: colors,
+      borderRadius: 0
+    }]
+  }
+})
 
 const chartOptions = computed(() => {
-  const dark = appStore.isDark
+  themeTick.value
   const axis = {
-    ticks: { color: dark ? '#f0f0f0' : '#1a1a1a' },
-    grid: { color: dark ? '#333844' : '#dddddd' }
+    ticks: { color: token('--ink') },
+    grid: { color: token('--ink-soft') }
   }
   return {
     responsive: true,
@@ -61,3 +68,10 @@ const chartOptions = computed(() => {
   }
 })
 </script>
+<style scoped>
+.chart-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-heading);
+  margin: 0 0 0.8rem 0;
+}
+</style>

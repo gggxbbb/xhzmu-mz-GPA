@@ -12,8 +12,8 @@
         "minimal-ui",
         "browser"
     ],
-    "theme_color": "#66ccff",
-    "background_color": "#ffffff",
+    "theme_color": "#FFF6E5",
+    "background_color": "#FFF6E5",
     "icons": [
         {
             "src": "img/AppImages/windows11/SmallTile.scale-100.png",
