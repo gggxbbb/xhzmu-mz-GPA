@@ -67,3 +67,7 @@ Decides: ADR-0002（移除云同步，取代 ADR-0001）
 
 - 本 spec 由 2026-08-30 的 grilling 会话沉淀：用户确认了"定向重构（保留领域核心）"与"Supabase 全部移除（不保留分享码）"两项关键决策。
 - ADR-0002、CONTEXT.md 修订已在会话中先行落盘。
+
+## Comments
+
+- 2026-08-30：已实现并提交（`4002b2b`，前置 `bc7799e` 为 tracker 切换）。TDD：新增 `tests/stores/app.test.js`（4 例）先行红后绿。code-review 双轴评审发现一处回归（ProfileSwitcher 误写 `targetGpa`）并已修复。验收：34/34 测试通过，`npm run build` 成功，`rg` 确认无残留引用。
