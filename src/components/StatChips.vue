@@ -17,16 +17,16 @@
 
 <style scoped>
 .stat-chips {
-  display: flex;
-  gap: 0.5rem;
-  overflow-x: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
 .stat-chip {
-  min-width: 80px;
   text-align: center;
   margin-bottom: 0;
+  padding: 0.75rem 0.5rem;
 }
 
 .stat-chip-value {
