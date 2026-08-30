@@ -33,6 +33,43 @@ const route = useRoute()
 </script>
 
 <style scoped>
+.nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  background: var(--surface);
+  border-top: 3px solid var(--ink);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 100;
+}
+
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: var(--text-xs);
+}
+
+.nav-item.active {
+  color: var(--accent-strong);
+  font-weight: var(--weight-heading);
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ticket 06 — nav SVG icons: thick strokes, ink color, theme-flipping */
 .nav-icon {
   width: 24px;

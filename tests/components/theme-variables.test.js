@@ -36,7 +36,7 @@ describe('neo signature classes (ticket 02)', () => {
         + styles.split(cls + '{').length - 1
         + styles.split(cls + ',').length - 1
       expect(styles).toContain(cls)
-      expect(occurrences).toBeGreaterThan(0)
+      expect(occurrences).toBe(1)
     }
   })
 

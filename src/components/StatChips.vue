@@ -31,12 +31,12 @@
 
 .stat-chip-value {
   font-family: var(--font-digits);
-  font-size: 1.2rem;
+  font-size: var(--text-lg);
   font-weight: var(--weight-digits);
 }
 
 .stat-chip-label {
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
 }
 </style>

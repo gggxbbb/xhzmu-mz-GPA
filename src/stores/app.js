@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 
-const THEME_COLORS = { light: '#66ccff', dark: '#13171f' }
+const THEME_COLORS = { light: '#FFF6E5', dark: '#1A1A1A' }
 
 export const useAppStore = defineStore('app', () => {
   const showVeryLongGPA = ref(false)

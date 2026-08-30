@@ -20,6 +20,17 @@
 .gpa-hero .gpa-display {
   margin: 0.5rem 0;
 }
+.gpa-display {
+  font-family: var(--font-digits);
+  font-size: var(--text-hero);
+  font-weight: var(--weight-digits);
+  line-height: 1;
+  text-align: center;
+}
+
+.gpa-display.below-target {
+  color: var(--danger);
+}
 
 .gpa-hero-label {
   font-size: var(--text-sm);

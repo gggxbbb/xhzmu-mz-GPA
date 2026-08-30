@@ -34,12 +34,12 @@
 
 .metric-value {
   font-family: var(--font-digits);
-  font-size: 1.4rem;
+  font-size: var(--text-xl);
   font-weight: var(--weight-digits);
 }
 
 .metric-label {
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   color: var(--ink-soft);
 }
 </style>

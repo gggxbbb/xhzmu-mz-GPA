@@ -50,14 +50,14 @@ describe('theme application', () => {
     stubMatchMedia(false)
     const meta = document.createElement('meta')
     meta.setAttribute('name', 'theme-color')
-    meta.setAttribute('content', '#66ccff')
+    meta.setAttribute('content', '#FFF6E5')
     document.head.appendChild(meta)
 
     const store = useAppStore()
-    expect(meta.getAttribute('content')).toBe('#66ccff')
+    expect(meta.getAttribute('content')).toBe('#FFF6E5')
 
     store.setTheme('dark')
-    expect(meta.getAttribute('content')).toBe('#13171f')
+    expect(meta.getAttribute('content')).toBe('#1A1A1A')
 
     meta.remove()
   })

@@ -17,7 +17,7 @@
 
 .gpa-summary-value {
   font-family: var(--font-digits);
-  font-size: 2.8rem;
+  font-size: var(--text-2xl);
   font-weight: var(--weight-digits);
   line-height: 1.1;
 }

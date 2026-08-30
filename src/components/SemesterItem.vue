@@ -50,6 +50,24 @@ const expanded = computed(() => uiStore.expandedSemesters.has(props.semester))
   padding: 0;
   overflow: hidden;
 }
+.semester-header {
+  width: 100%;
+  padding: 0.8rem;
+  background: var(--surface);
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.semester-header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 
 .semester-title {
   font-weight: var(--weight-heading);

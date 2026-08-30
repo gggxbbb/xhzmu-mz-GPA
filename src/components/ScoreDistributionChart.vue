@@ -11,33 +11,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { computed } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { ChartJS } from '../plugins/chart.js'
+import { useThemeTokens } from '../composables/useThemeTokens.js'
 
 const props = defineProps({
   grades: Object
 })
 
-// Chart.js 在 canvas 上渲染,无法直接使用 var();
-// 运行时从 :root 解析 token,并通过 MutationObserver 监听
-// data-theme 翻转(stores/app.js 的 applyTheme 写入)触发重算。
-const themeTick = ref(0)
-let themeObserver
-onMounted(() => {
-  themeObserver = new MutationObserver(() => {
-    themeTick.value++
-  })
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-theme']
-  })
-})
-onBeforeUnmount(() => themeObserver?.disconnect())
-
-function token(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-}
+const { themeTick, token } = useThemeTokens()
 
 const distribution = computed(() => {
   const buckets = { '90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '<60': 0 }
