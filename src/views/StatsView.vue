@@ -8,11 +8,6 @@
       :total-count="gpa.allCourses.value.length"
       :semester-gpas="gpa.semesterGPAs.value"
     />
-    <TargetAnalysisCard
-      :current-gpa="gpa.currentGPA.value"
-      :required-average="gpa.requiredAverageForTarget.value"
-      :predicted="gpa.predictedGPA"
-    />
     <FailingWarningCard :courses="failingCourses" />
     <GpaTrendChart :semester-gpas="gpa.semesterGPAs.value" />
     <ScoreDistributionChart :grades="currentGrades" />
@@ -28,7 +23,6 @@ import { useGradesStore } from '../stores/grades'
 import { useGPA } from '../composables/useGPA'
 import GpaSummaryCard from '../components/GpaSummaryCard.vue'
 import MetricGrid from '../components/MetricGrid.vue'
-import TargetAnalysisCard from '../components/TargetAnalysisCard.vue'
 import FailingWarningCard from '../components/FailingWarningCard.vue'
 import GpaTrendChart from '../components/GpaTrendChart.vue'
 import ScoreDistributionChart from '../components/ScoreDistributionChart.vue'

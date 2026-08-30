@@ -64,7 +64,7 @@ function toggleWhatIf() {
 </script>
 <style scoped>
 .course-row {
-  padding: 0.6rem 0;
+  padding: 0.75rem 0;
   border-bottom: 1px solid var(--ink-soft);
 }
 
@@ -93,13 +93,17 @@ function toggleWhatIf() {
 }
 
 .grade-input {
-  width: 80px;
+  width: 96px;
+  min-height: 48px;
   text-align: center;
+  font-family: var(--font-digits);
+  font-size: var(--text-lg);
 }
 
 .whatif-btn {
-  padding: 0.3rem 0.5rem;
-  font-size: var(--text-xs);
-  min-height: 36px;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--text-base);
+  min-height: 48px;
+  min-width: 48px;
 }
 </style>

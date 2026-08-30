@@ -6,7 +6,7 @@
         {{ formattedGPA }}
       </div>
       <div class="gpa-hero-sub">
-        目标 {{ targetGpa }} · {{ diffText }}
+        目标 <span class="gpa-target">{{ formattedTarget }}</span> · {{ diffText }}
       </div>
     </div>
   </div>
@@ -27,7 +27,15 @@
 }
 
 .gpa-hero-sub {
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
+  color: var(--ink-soft);
+}
+
+.gpa-target {
+  font-family: var(--font-digits);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-digits);
+  color: var(--ink);
 }
 </style>
 
@@ -49,6 +57,8 @@ const formattedGPA = computed(() => {
   const decimals = appStore.showVeryLongGPA ? 5 : (Math.abs(safeGPA.value - safeTarget.value) < 0.01 ? 3 : 2)
   return safeGPA.value.toFixed(decimals)
 })
+
+const formattedTarget = computed(() => safeTarget.value.toFixed(2))
 
 const isBelowTarget = computed(() => safeGPA.value < safeTarget.value && safeGPA.value > 0)
 

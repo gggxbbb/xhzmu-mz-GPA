@@ -1,6 +1,11 @@
 <template>
   <div v-if="currentProfile">
     <GpaCard :gpa="gpa.currentGPA.value" :target-gpa="currentProfile.targetGPA" />
+    <TargetAnalysisCard
+      :current-gpa="gpa.currentGPA.value"
+      :required-average="gpa.requiredAverageForTarget.value"
+      :predicted="gpa.predictedGPA"
+    />
     <StatChips
       :total-credits="gpa.totalCredits.value"
       :entered-count="gpa.enteredCourses.value.length"
@@ -35,6 +40,7 @@ import { useUIStore } from '../stores/ui'
 import { useGPA } from '../composables/useGPA'
 import { sortClasses } from '../utils/semesterSort'
 import GpaCard from '../components/GpaCard.vue'
+import TargetAnalysisCard from '../components/TargetAnalysisCard.vue'
 import StatChips from '../components/StatChips.vue'
 import SearchBar from '../components/SearchBar.vue'
 import SemesterItem from '../components/SemesterItem.vue'
