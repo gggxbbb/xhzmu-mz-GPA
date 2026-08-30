@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — `.neo-*` 签名类 + 清除组件内联样式
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 页面各分组使用签名类，零内联样式
 - [ ] 危险区使用 danger 修饰类，警示性醒目

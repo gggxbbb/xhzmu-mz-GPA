@@ -1,12 +1,24 @@
 <template>
-  <div class="card" style="background: var(--danger-soft); border-color: var(--danger-border);">
-    <div style="font-weight: bold; margin-bottom: 0.8rem; color: var(--danger-strong);">危险操作</div>
-    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-      <button class="btn btn-danger" @click="clearGrades">仅清除成绩</button>
-      <button class="btn btn-danger" @click="clearAll">清除所有本地数据</button>
+  <div class="neo-card neo-card--danger">
+    <div class="danger-title">危险操作</div>
+    <div class="danger-actions">
+      <button class="neo-btn neo-btn--danger" @click="clearGrades">仅清除成绩</button>
+      <button class="neo-btn neo-btn--danger" @click="clearAll">清除所有本地数据</button>
     </div>
   </div>
 </template>
+<style scoped>
+.danger-title {
+  font-weight: var(--weight-heading);
+  margin-bottom: 0.8rem;
+}
+
+.danger-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+</style>
 
 <script setup>
 import { useAppStore } from '../stores/app'

@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — `.neo-*` 签名类 + 清除组件内联样式
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 三个 tab 图标均为内联 SVG，粗描边，颜色来自 `--ink`
 - [ ] 「我的」图标为人形语义

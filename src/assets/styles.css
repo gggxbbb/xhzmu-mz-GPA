@@ -1,11 +1,11 @@
 /* ============================================================
-   新粗野主义 design tokens(ADR-0003)
+   新粗野主义 design tokens + 签名类(ADR-0003)
    - --ink 单 token 同时供给边框、硬阴影、正文文字;dark 主题翻转
-   - 硬阴影签名约定:box-shadow: 4px 4px 0 var(--ink);
-     按压态 box-shadow: 2px 2px 0 var(--ink) + translate(2px, 2px)
-     (工具变量 --shadow-hard / --shadow-press 已备好)
-   - 旧 token 名(--brand/--text/--muted/--border 等)保留为别名,
-     组件内联样式在 ticket 02 统一收敛前不回归
+   - 签名约定(全站只定义一次,见 .neo-card/.neo-btn/.neo-input):
+     边框 3px solid var(--ink) + box-shadow: var(--shadow-hard)
+     按压态 translate(2px, 2px) + box-shadow: var(--shadow-press)
+   - 语义变体用修饰类(.neo-card--danger/.neo-card--accent/
+     .neo-btn--primary/.neo-btn--danger)换 soft/border 底色
    ============================================================ */
 
 /* Archivo Black 数字子集(仅 0-9. 共 11 字形, ~3.4KB)
@@ -25,6 +25,7 @@
   --bg: #FFF6E5;
   --surface: #FFFFFF;
   --ink: #1A1A1A;
+  --ink-soft: #666666;
   --accent: #2E9BFF;
   --signal: #FFD02F;
   --danger: #FF4D4D;
@@ -62,21 +63,13 @@
   --radius: 0.75rem;
   --spacing: 1rem;
   --nav-height: 64px;
-
-  /* ---- 旧 token 别名(组件仍引用,ticket 02 收敛后删除) ---- */
-  --text: var(--ink);
-  --muted: #666666;
-  --border: var(--ink);
-  --brand: var(--accent);
-  --brand-dark: #1668B4;
-  --warning: var(--signal);
-  --success: #4caf50;
 }
 
 [data-theme="dark"] {
   --bg: #1A1A1A;
   --surface: #242424;
   --ink: #FFF6E5;
+  --ink-soft: #A0A0A0;
   /* --accent / --signal 两主题共用,不覆写 */
   --danger: #FF6B6B;
 
@@ -86,10 +79,6 @@
   --accent-soft: #14283D;
   --accent-border: #2E9BFF;
   --accent-strong: #8CC9FF;
-
-  /* 旧 token 别名(dark 覆写) */
-  --muted: #A0A0A0;
-  --brand-dark: #6BB9FF;
 }
 
 * {
@@ -100,7 +89,7 @@ body {
   margin: 0;
   font-family: var(--font-body);
   background: var(--bg);
-  color: var(--text);
+  color: var(--ink);
 }
 
 #app {
@@ -118,57 +107,83 @@ body {
   width: 100%;
 }
 
-.card {
+/* ============================================================
+   签名类(全站唯一定义点)
+   ============================================================ */
+
+.neo-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 3px solid var(--ink);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-hard);
   padding: var(--spacing);
   margin-bottom: var(--spacing);
 }
 
-.btn {
+.neo-card--danger {
+  background: var(--danger-soft);
+  border-color: var(--danger-border);
+  color: var(--danger-strong);
+}
+
+.neo-card--accent {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--ink);
+}
+
+.neo-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4em;
   padding: 0.6em 1em;
+  border: 3px solid var(--ink);
   border-radius: 0.5em;
-  border: 1px solid var(--border);
+  box-shadow: var(--shadow-hard);
   background: var(--surface);
-  color: var(--text);
+  color: var(--ink);
   font-size: 0.95rem;
   cursor: pointer;
   min-height: 44px;
 }
 
-.btn:focus-visible,
-.input:focus-visible,
-.nav-item:focus-visible {
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
+.neo-btn--primary {
+  background: var(--accent);
+  color: #FFFFFF;
 }
 
-.btn-primary {
-  background: var(--brand);
-  color: white;
-  border-color: var(--brand);
-}
-
-.btn-danger {
+.neo-btn--danger {
   background: var(--danger-soft);
   color: var(--danger-strong);
   border-color: var(--danger-border);
 }
 
-.input {
+.neo-input {
   width: 100%;
   padding: 0.6em;
-  border: 1px solid var(--border);
+  border: 3px solid var(--ink);
   border-radius: 0.5em;
-  background: var(--bg);
-  color: var(--text);
+  box-shadow: var(--shadow-hard);
+  background: var(--surface);
+  color: var(--ink);
   font-size: 1rem;
   min-height: 44px;
+}
+
+/* 按压反馈:位移 + 阴影缩小(签名约定,只此一处) */
+.neo-btn:active,
+.neo-input:active,
+.neo-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-press);
+}
+
+.neo-btn:focus-visible,
+.neo-input:focus-visible,
+.nav-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .visually-hidden {
@@ -198,7 +213,7 @@ body {
 }
 
 .semester-header:focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
@@ -221,7 +236,7 @@ body {
   right: 0;
   height: var(--nav-height);
   background: var(--surface);
-  border-top: 1px solid var(--border);
+  border-top: 3px solid var(--ink);
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -236,13 +251,14 @@ body {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--muted);
+  color: var(--ink-soft);
   text-decoration: none;
   font-size: 0.75rem;
 }
 
 .nav-item.active {
-  color: var(--brand-dark);
+  color: var(--accent-strong);
+  font-weight: var(--weight-heading);
 }
 
 @media (min-width: 768px) {

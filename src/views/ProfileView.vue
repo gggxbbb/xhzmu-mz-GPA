@@ -5,12 +5,28 @@
     <ImportExportCard />
     <DisplaySettings />
     <DangerZone />
-    <div style="text-align: center; margin-top: 1rem;">
-      <a href="https://github.com/gggxbbb/xhzmu-mz-GPA" target="_blank" style="font-size: 0.8rem; color: var(--muted);">GitHub</a>
+    <div class="footer-link">
+      <a href="https://github.com/gggxbbb/xhzmu-mz-GPA" target="_blank">GitHub</a>
     </div>
   </div>
-  <div v-else class="card" style="text-align: center;">加载中...</div>
+  <div v-else class="neo-card loading-state">加载中...</div>
 </template>
+
+<style scoped>
+.footer-link {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.footer-link a {
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+}
+
+.loading-state {
+  text-align: center;
+}
+</style>
 
 <script setup>
 import { computed } from 'vue'

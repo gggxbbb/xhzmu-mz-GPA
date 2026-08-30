@@ -1,6 +1,6 @@
 <template>
-  <section class="card" aria-labelledby="gpa-trend-title">
-    <h2 id="gpa-trend-title" style="font-size: 1rem; font-weight: bold; margin: 0 0 0.8rem 0;">学期 GPA 趋势</h2>
+  <section class="neo-card" aria-labelledby="gpa-trend-title">
+    <h2 id="gpa-trend-title" class="chart-title">学期 GPA 趋势</h2>
     <Bar
       :data="chartData"
       :options="chartOptions"
@@ -50,3 +50,10 @@ const chartOptions = computed(() => {
   }
 })
 </script>
+<style scoped>
+.chart-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-heading);
+  margin: 0 0 0.8rem 0;
+}
+</style>

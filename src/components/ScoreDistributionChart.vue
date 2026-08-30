@@ -1,6 +1,6 @@
 <template>
-  <section class="card" aria-labelledby="score-distribution-title">
-    <h2 id="score-distribution-title" style="font-size: 1rem; font-weight: bold; margin: 0 0 0.8rem 0;">成绩分布</h2>
+  <section class="neo-card" aria-labelledby="score-distribution-title">
+    <h2 id="score-distribution-title" class="chart-title">成绩分布</h2>
     <Bar
       :data="chartData"
       :options="chartOptions"
@@ -61,3 +61,10 @@ const chartOptions = computed(() => {
   }
 })
 </script>
+<style scoped>
+.chart-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-heading);
+  margin: 0 0 0.8rem 0;
+}
+</style>

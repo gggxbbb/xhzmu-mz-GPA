@@ -1,16 +1,35 @@
 <template>
-  <div class="card" style="background: linear-gradient(135deg, var(--brand), var(--brand-dark)); color: white; border: none;">
-    <div style="text-align: center;">
-      <div style="font-size: 0.9rem; opacity: 0.9;">当前学位绩点</div>
-      <div class="gpa-display" :class="{ 'below-target': isBelowTarget }" style="margin: 0.5rem 0;">
+  <div class="neo-card neo-card--accent">
+    <div class="gpa-hero">
+      <div class="gpa-hero-label">当前学位绩点</div>
+      <div class="gpa-display" :class="{ 'below-target': isBelowTarget }">
         {{ formattedGPA }}
       </div>
-      <div style="font-size: 0.85rem; opacity: 0.9;">
+      <div class="gpa-hero-sub">
         目标 {{ targetGpa }} · {{ diffText }}
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.gpa-hero {
+  text-align: center;
+}
+
+.gpa-hero .gpa-display {
+  margin: 0.5rem 0;
+}
+
+.gpa-hero-label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-heading);
+}
+
+.gpa-hero-sub {
+  font-size: var(--text-sm);
+}
+</style>
 
 <script setup>
 import { computed } from 'vue'

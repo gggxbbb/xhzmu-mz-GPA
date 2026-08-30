@@ -19,11 +19,11 @@
       @update-grade="onUpdateGrade"
       @toggle-what-if="uiStore.setActiveWhatIfCourse"
     />
-    <div v-if="!hasFilteredClasses" style="text-align: center; color: var(--muted); padding: 2rem;">
+    <div v-if="!hasFilteredClasses" class="empty-state">
       未找到匹配课程
     </div>
   </div>
-  <div v-else class="card" style="text-align: center;">加载中...</div>
+  <div v-else class="neo-card loading-state">加载中...</div>
 </template>
 
 <script setup>
@@ -71,3 +71,14 @@ function onUpdateGrade(courseName, value) {
   gradesStore.setGrade(appStore.currentProfileId, courseName, value)
 }
 </script>
+<style scoped>
+.empty-state {
+  text-align: center;
+  color: var(--ink-soft);
+  padding: 2rem;
+}
+
+.loading-state {
+  text-align: center;
+}
+</style>

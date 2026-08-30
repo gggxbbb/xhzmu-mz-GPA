@@ -1,7 +1,7 @@
 <template>
-  <section class="card" style="background: var(--accent-soft); border-color: var(--accent-border);" aria-labelledby="target-analysis-title">
-    <h2 id="target-analysis-title" style="font-size: 1rem; font-weight: bold; margin: 0 0 0.5rem 0;">📈 目标达成分析</h2>
-    <div style="font-size: 0.85rem; color: var(--text); line-height: 1.6;">
+  <section class="neo-card neo-card--accent" aria-labelledby="target-analysis-title">
+    <h2 id="target-analysis-title" class="analysis-title">📈 目标达成分析</h2>
+    <div class="analysis-body">
       <div>• 按当前成绩，最终 GPA 预计 <strong>{{ Number.isFinite(currentGpa) ? currentGpa.toFixed(2) : '0.00' }}</strong></div>
       <div v-if="requiredAverage != null">
         • 守住目标所需剩余课程平均分：<strong>{{ Number.isFinite(requiredAverage) ? requiredAverage.toFixed(1) : '-' }}</strong>
@@ -25,3 +25,16 @@ const props = defineProps({
 const predicted85 = computed(() => props.predicted(85))
 const predicted90 = computed(() => props.predicted(90))
 </script>
+<style scoped>
+.analysis-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-heading);
+  margin: 0 0 0.5rem 0;
+}
+
+.analysis-body {
+  font-size: var(--text-sm);
+  color: var(--ink);
+  line-height: 1.6;
+}
+</style>

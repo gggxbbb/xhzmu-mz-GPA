@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — `.neo-*` 签名类 + 清除组件内联样式
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] GPA 数字 56–72px、Archivo Black 数字字体、字重 900，首页第一视觉焦点
 - [ ] 目标分析卡在首页渲染，紧邻巨号 GPA；统计页不再渲染它

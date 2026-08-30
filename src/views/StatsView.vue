@@ -17,7 +17,7 @@
     <GpaTrendChart :semester-gpas="gpa.semesterGPAs.value" />
     <ScoreDistributionChart :grades="currentGrades" />
   </div>
-  <div v-else class="card" style="text-align: center;">加载中...</div>
+  <div v-else class="neo-card loading-state">加载中...</div>
 </template>
 
 <script setup>
@@ -52,3 +52,8 @@ const failingCourses = computed(() => {
   return result
 })
 </script>
+<style scoped>
+.loading-state {
+  text-align: center;
+}
+</style>
