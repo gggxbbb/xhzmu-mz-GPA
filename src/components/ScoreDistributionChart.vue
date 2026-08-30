@@ -11,16 +11,33 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { ChartJS } from '../plugins/chart.js'
-import { useAppStore } from '../stores/app'
 
 const props = defineProps({
   grades: Object
 })
 
-const appStore = useAppStore()
+// Chart.js 在 canvas 上渲染,无法直接使用 var();
+// 运行时从 :root 解析 token,并通过 MutationObserver 监听
+// data-theme 翻转(stores/app.js 的 applyTheme 写入)触发重算。
+const themeTick = ref(0)
+let themeObserver
+onMounted(() => {
+  themeObserver = new MutationObserver(() => {
+    themeTick.value++
+  })
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
+  })
+})
+onBeforeUnmount(() => themeObserver?.disconnect())
+
+function token(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
 
 const distribution = computed(() => {
   const buckets = { '90-100': 0, '80-89': 0, '70-79': 0, '60-69': 0, '<60': 0 }
@@ -35,21 +52,28 @@ const distribution = computed(() => {
   return buckets
 })
 
-const chartData = computed(() => ({
-  labels: Object.keys(distribution.value),
-  datasets: [{
-    label: '课程数',
-    data: Object.values(distribution.value),
-    backgroundColor: ['#4caf50', '#66ccff', '#ff9800', '#ff5722', '#f44336'],
-    borderRadius: 4
-  }]
-}))
+const chartData = computed(() => {
+  themeTick.value
+  // 及格区间统一 accent,不及格区间(<60)用 danger 标出
+  const colors = Object.keys(distribution.value).map((bucket) =>
+    bucket === '<60' ? token('--danger') : token('--accent')
+  )
+  return {
+    labels: Object.keys(distribution.value),
+    datasets: [{
+      label: '课程数',
+      data: Object.values(distribution.value),
+      backgroundColor: colors,
+      borderRadius: 0
+    }]
+  }
+})
 
 const chartOptions = computed(() => {
-  const dark = appStore.isDark
+  themeTick.value
   const axis = {
-    ticks: { color: dark ? '#f0f0f0' : '#1a1a1a' },
-    grid: { color: dark ? '#333844' : '#dddddd' }
+    ticks: { color: token('--ink') },
+    grid: { color: token('--ink-soft') }
   }
   return {
     responsive: true,

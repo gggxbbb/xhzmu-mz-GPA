@@ -11,10 +11,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { Bar } from 'vue-chartjs'
 import { ChartJS } from '../plugins/chart.js'
-import { useAppStore } from '../stores/app'
 
 const GPA_MAX = 5
 
@@ -22,23 +21,44 @@ const props = defineProps({
   semesterGpas: Object
 })
 
-const appStore = useAppStore()
+// Chart.js 在 canvas 上渲染,无法直接使用 var();
+// 运行时从 :root 解析 token,并通过 MutationObserver 监听
+// data-theme 翻转(stores/app.js 的 applyTheme 写入)触发重算。
+const themeTick = ref(0)
+let themeObserver
+onMounted(() => {
+  themeObserver = new MutationObserver(() => {
+    themeTick.value++
+  })
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
+  })
+})
+onBeforeUnmount(() => themeObserver?.disconnect())
 
-const chartData = computed(() => ({
-  labels: Object.keys(props.semesterGpas),
-  datasets: [{
-    label: '学期 GPA',
-    data: Object.values(props.semesterGpas),
-    backgroundColor: '#66ccff',
-    borderRadius: 4
-  }]
-}))
+function token(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
+
+const chartData = computed(() => {
+  themeTick.value
+  return {
+    labels: Object.keys(props.semesterGpas),
+    datasets: [{
+      label: '学期 GPA',
+      data: Object.values(props.semesterGpas),
+      backgroundColor: token('--accent'),
+      borderRadius: 0
+    }]
+  }
+})
 
 const chartOptions = computed(() => {
-  const dark = appStore.isDark
+  themeTick.value
   const axis = {
-    ticks: { color: dark ? '#f0f0f0' : '#1a1a1a' },
-    grid: { color: dark ? '#333844' : '#dddddd' }
+    ticks: { color: token('--ink') },
+    grid: { color: token('--ink-soft') }
   }
   return {
     responsive: true,
