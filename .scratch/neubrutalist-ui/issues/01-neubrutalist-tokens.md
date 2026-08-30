@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] light 主题：bg `#FFF6E5`、surface `#FFFFFF`、ink `#1A1A1A`、accent `#2E9BFF`、signal `#FFD02F`、danger `#FF4D4D` 及 warning 卡片所需 soft/border 变体
 - [ ] dark 主题：bg `#1A1A1A`、surface `#242424`、ink 翻转 `#FFF6E5`，accent/signal 不变，danger `#FF6B6B`
@@ -12,3 +12,7 @@
 - [ ] Archivo Black 子集 webfont 接入（仅数字字形，KB 级），数字 900 / 标题 800 / 正文 400–500 的字重体系
 - [ ] `index.html` 主题解析脚本与 store 的 isDark 逻辑不受影响（本票不动主题解析，只动值）
 - [ ] 双主题下浏览器冒烟：切换 light/dark，边框与阴影在两主题下均可见
+
+## Comments
+
+已由 subagent 完成：token 层重写（ink 翻转双主题）、Archivo Black 11 字形子集（3.4KB，本地 woff2 + workbox 预缓存）、字号阶梯；保留旧变量别名零回归（02 收敛后删）。theme-variables 测试 4/4 通过，双主题浏览器冒烟通过。

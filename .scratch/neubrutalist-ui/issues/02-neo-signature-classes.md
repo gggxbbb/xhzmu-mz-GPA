@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — 新粗野主义 token 体系
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 签名类封装边框 + 硬阴影 + 按压态（`:active` 位移 + 阴影缩小），全站只定义一次
 - [ ] warning 类卡片（TargetAnalysisCard、DangerZone、FailingWarningCard、IllegalWarning 等）改用修饰类，不再手写颜色
