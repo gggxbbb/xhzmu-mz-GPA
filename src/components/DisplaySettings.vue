@@ -19,6 +19,7 @@
 <style scoped>
 .settings-title {
   font-weight: var(--weight-heading);
+  font-size: var(--text-lg);
   margin-bottom: 0.8rem;
 }
 
@@ -26,6 +27,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.8rem;
+}
+
+.settings-row input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
 }
 
 .settings-row--gap {

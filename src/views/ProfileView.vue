@@ -1,10 +1,18 @@
 <template>
-  <div v-if="currentProfile">
-    <ProfileSwitcher />
-    <CourseConfigEditor />
-    <ImportExportCard />
-    <DisplaySettings />
-    <DangerZone />
+  <div v-if="currentProfile" class="profile-page">
+    <section class="profile-group" aria-label="档案管理">
+      <ProfileSwitcher />
+      <CourseConfigEditor />
+    </section>
+    <section class="profile-group" aria-label="显示设置">
+      <DisplaySettings />
+    </section>
+    <section class="profile-group" aria-label="导入导出">
+      <ImportExportCard />
+    </section>
+    <section class="profile-group" aria-label="危险区">
+      <DangerZone />
+    </section>
     <div class="footer-link">
       <a href="https://github.com/gggxbbb/xhzmu-mz-GPA" target="_blank">GitHub</a>
     </div>
@@ -13,6 +21,10 @@
 </template>
 
 <style scoped>
+.profile-group {
+  margin-bottom: 0.5rem;
+}
+
 .footer-link {
   text-align: center;
   margin-top: 1rem;

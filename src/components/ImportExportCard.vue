@@ -12,6 +12,7 @@
 <style scoped>
 .backup-title {
   font-weight: var(--weight-heading);
+  font-size: var(--text-lg);
   margin-bottom: 0.8rem;
 }
 

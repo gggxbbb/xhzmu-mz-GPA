@@ -4,9 +4,13 @@
 
 **Blocked by:** 02 — `.neo-*` 签名类 + 清除组件内联样式
 
-**Status:** claimed
+**Status:** resolved
 
 - [ ] 页面各分组使用签名类，零内联样式
 - [ ] 危险区使用 danger 修饰类，警示性醒目
 - [ ] 显示设置的主题切换在新双主题下工作正常
 - [ ] 浏览器冒烟：切换 profile、导出导入入口可用
+
+## Comments
+
+已由 subagent 完成：四语义分组重排、危险区 danger 修饰强化、主题切换/profile 切换/导入导出实测通过，零内联样式。

@@ -23,6 +23,7 @@
 <style scoped>
 .profiles-title {
   font-weight: var(--weight-heading);
+  font-size: var(--text-lg);
   margin-bottom: 0.8rem;
 }
 
@@ -57,9 +58,14 @@
 }
 
 .profile-current-tag {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
   font-size: var(--text-xs);
-  color: var(--accent-strong);
   font-weight: var(--weight-heading);
+  color: var(--ink);
+  background: var(--signal);
+  border: 2px solid var(--ink);
+  border-radius: 0.3rem;
 }
 
 .switch-btn {

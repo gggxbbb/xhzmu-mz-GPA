@@ -1,6 +1,7 @@
 <template>
   <div class="neo-card neo-card--danger">
     <div class="danger-title">危险操作</div>
+    <p class="danger-hint">以下操作不可恢复，执行前请先导出备份。</p>
     <div class="danger-actions">
       <button class="neo-btn neo-btn--danger" @click="clearGrades">仅清除成绩</button>
       <button class="neo-btn neo-btn--danger" @click="clearAll">清除所有本地数据</button>
@@ -9,8 +10,25 @@
 </template>
 <style scoped>
 .danger-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--text-lg);
   font-weight: var(--weight-heading);
-  margin-bottom: 0.8rem;
+}
+
+.danger-title::before {
+  content: '';
+  width: 0.9em;
+  height: 0.9em;
+  flex-shrink: 0;
+  background: var(--danger);
+  border: 2px solid var(--danger-strong);
+}
+
+.danger-hint {
+  margin: 0.5rem 0 0.8rem;
+  font-size: var(--text-sm);
 }
 
 .danger-actions {
