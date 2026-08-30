@@ -4,8 +4,12 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] `css/` 目录整体删除
 - [ ] 全局搜索确认无任何引用（index.html、源码、public/manifest.json）
 - [ ] 开发与构建流程不受影响（dev server 与 build 均正常）
+
+## Comments
+
+已删除 css/ 目录（239 个文件），全局零引用，dev/build 脚本不涉及。
