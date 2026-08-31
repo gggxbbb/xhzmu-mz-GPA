@@ -4,6 +4,7 @@
     <TargetAnalysisCard
       :current-gpa="gpa.currentGPA.value"
       :required-average="gpa.requiredAverageForTarget.value"
+      :remaining-credits="gpa.remainingCredits.value"
       :predicted="gpa.predictedGPA"
     />
     <StatChips
@@ -12,7 +13,7 @@
       :semester-count="Object.keys(currentProfile.classes).length"
     />
     <SearchBar v-model="uiStore.searchQuery" />
-    <IllegalWarning :courses="gpa.illegalGrades.value" />
+    <IllegalWarning :courses="gpa.suspiciousGrades.value" />
     <SemesterItem
       v-for="(courses, semester) in filteredClasses"
       :key="semester"

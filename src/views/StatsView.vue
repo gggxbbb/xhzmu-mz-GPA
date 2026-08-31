@@ -13,7 +13,7 @@
       />
     </section>
     <section class="stats-group" aria-label="警告">
-      <FailingWarningCard :courses="failingCourses" />
+      <FailingWarningCard :courses="gpa.failingCourses.value" />
     </section>
     <section class="stats-group" aria-label="图表">
       <GpaTrendChart :semester-gpas="gpa.semesterGPAs.value" />
@@ -43,16 +43,6 @@ const currentProfile = computed(() => profilesStore.getProfile(appStore.currentP
 const currentGrades = computed(() => gradesStore.getGrades(appStore.currentProfileId))
 const gpa = useGPA(currentProfile, currentGrades)
 
-const failingCourses = computed(() => {
-  const result = []
-  for (const course of gpa.enteredCourses.value) {
-    const score = currentGrades.value[course.name]
-    if (score < 60) {
-      result.push({ name: course.name, credit: course.credit, score })
-    }
-  }
-  return result
-})
 </script>
 <style scoped>
 /* 组间距与首页/我的页一致:卡片自身 margin-bottom: var(--spacing),

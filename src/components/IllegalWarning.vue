@@ -6,7 +6,7 @@
     aria-live="polite"
   >
     <div class="warning-body">
-      ⚠️ 以下课程成绩小于 10 分，计算结果可能不准确：{{ courses.join('、') }}
+      ⚠️ 以下课程成绩小于 10 分，疑似误输入；按校规将以 0 绩点计入：{{ courses.join('、') }}
     </div>
   </div>
 </template>

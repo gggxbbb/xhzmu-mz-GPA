@@ -1,14 +1,19 @@
 import { computed } from 'vue'
 import { sortClasses } from '../utils/semesterSort'
 
+// XZHMU official table (学籍管理规定第十二条): scores below 60 convert to
+// grade point 0 — never negative; at or above 60, (score - 50) / 10.
+function gradePoint(score) {
+  return score < 60 ? 0 : (score - 50) / 10
+}
+
 export function calculateGPA(courses, grades) {
   let weightedGradePoints = 0
   let totalCredit = 0
   for (const course of courses) {
     const score = grades[course.name]
     if (score == null || isNaN(score)) continue
-    const gradePoint = (score - 50) / 10
-    weightedGradePoints += gradePoint * course.credit
+    weightedGradePoints += gradePoint(score) * course.credit
     totalCredit += course.credit
   }
   if (totalCredit <= 0) return 0
@@ -50,9 +55,17 @@ export function useGPA(profile, grades) {
     return result
   })
 
-  // Illegal grades (< 10) are still included in GPA calculation to match the
-  // original app's behavior; they are flagged only for user awareness.
-  const illegalGrades = computed(() =>
+  // Degree courses with a failing grade (< 60): they contribute grade point 0
+  // (see calculateGPA) and block the degree, so they are surfaced for warning.
+  const failingCourses = computed(() =>
+    enteredCourses.value
+      .filter(c => grades.value[c.name] < 60)
+      .map(c => ({ name: c.name, credit: c.credit, score: grades.value[c.name] }))
+  )
+
+  // Suspiciously low scores (< 10) are likely typos. They are still calculated
+  // per the official table (grade point 0); this list only feeds the UI hint.
+  const suspiciousGrades = computed(() =>
     enteredCourses.value.filter(c => grades.value[c.name] < 10).map(c => c.name)
   )
 
@@ -67,9 +80,12 @@ export function useGPA(profile, grades) {
     const currentTotalPoint = currentGPA.value * enteredCredits.value
     const needed = target * totalCredits.value - currentTotalPoint
     if (remainingCredits.value <= 0) return null
+    if (needed <= 0) return 0
     const average = (needed / remainingCredits.value) * 10 + 50
     if (average > 100) return null
-    return Math.max(0, average)
+    // Grade points only accrue at scores >= 60; below that every course
+    // contributes 0, so the minimum useful average is 60.
+    return Math.max(60, average)
   })
 
   function predictedGPA(averageScore) {
@@ -77,7 +93,7 @@ export function useGPA(profile, grades) {
       return currentGPA.value
     }
     const remaining = allCourses.value.filter(c => grades.value[c.name] == null || isNaN(grades.value[c.name]))
-    const extraPoint = remaining.reduce((sum, c) => sum + ((averageScore - 50) / 10) * c.credit, 0)
+    const extraPoint = remaining.reduce((sum, c) => sum + gradePoint(averageScore) * c.credit, 0)
     const extraCredit = remaining.reduce((sum, c) => sum + c.credit, 0)
     const totalCredit = enteredCredits.value + extraCredit
     if (totalCredit <= 0) return 0
@@ -91,7 +107,8 @@ export function useGPA(profile, grades) {
     totalCredits,
     enteredCredits,
     semesterGPAs,
-    illegalGrades,
+    failingCourses,
+    suspiciousGrades,
     remainingCredits,
     requiredAverageForTarget,
     predictedGPA

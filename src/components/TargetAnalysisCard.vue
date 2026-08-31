@@ -6,6 +6,7 @@
       <div v-if="requiredAverage != null">
         • 守住目标所需剩余课程平均分：<strong>{{ Number.isFinite(requiredAverage) ? requiredAverage.toFixed(1) : '-' }}</strong>
       </div>
+      <div v-else-if="remainingCredits > 0">• 目标不可达：守住目标所需剩余平均分超过 100 分</div>
       <div v-else>• 所有课程已录入</div>
       <div>• 剩余课程平均 85 分时，最终 GPA 可达 <strong>{{ Number.isFinite(predicted85) ? predicted85.toFixed(2) : '0.00' }}</strong></div>
       <div>• 剩余课程平均 90 分时，最终 GPA 可达 <strong>{{ Number.isFinite(predicted90) ? predicted90.toFixed(2) : '0.00' }}</strong></div>
@@ -19,6 +20,7 @@ import { computed } from 'vue'
 const props = defineProps({
   currentGpa: { type: Number, default: 0 },
   requiredAverage: { type: Number, default: null },
+  remainingCredits: { type: Number, default: 0 },
   predicted: { type: Function, default: () => 0 }
 })
 

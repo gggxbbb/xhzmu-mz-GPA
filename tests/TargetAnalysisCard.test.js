@@ -23,4 +23,17 @@ describe('TargetAnalysisCard', () => {
     })
     expect(wrapper.text()).toContain('3.59')
   })
+  it('shows the unreachable message when requiredAverage is null with credits remaining', () => {
+    const wrapper = mount(TargetAnalysisCard, {
+      props: { currentGpa: 1.0, requiredAverage: null, remainingCredits: 20, predicted: () => 3.6 }
+    })
+    expect(wrapper.text()).toContain('目标不可达')
+  })
+
+  it('shows all-entered message when requiredAverage is null with no credits remaining', () => {
+    const wrapper = mount(TargetAnalysisCard, {
+      props: { currentGpa: 3.5, requiredAverage: null, remainingCredits: 0, predicted: () => 3.6 }
+    })
+    expect(wrapper.text()).toContain('所有课程已录入')
+  })
 })
