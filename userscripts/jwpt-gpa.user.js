@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         徐医教务成绩 GPA 统计
 // @namespace    https://github.com/xzhmu-gpa
-// @version      1.0.6
+// @version      1.1.0
 // @description  在徐医教务「学生成绩查询」页自动选全部范围、完成查询，并统计 GPA/学位 GPA/学分/平均分/最值/分数分布
 // @match        https://jwpt.xzhmu.edu.cn/cjcx/cjcx_cxDgXscj.html*
 // @grant        none
@@ -128,7 +128,18 @@
     var s = scoreOf(row);
     if (s != null) return s >= 60;
     var txt = String(row.cj || row.bfzcj || '').trim();
-    return PASS_TEXTS.indexOf(txt) !== -1;
+    for (var i = 0; i < PASS_TEXTS.length; i++) {
+      if (PASS_TEXTS[i] === txt) return true;
+    }
+    return false;
+  }
+
+  // 免修：成绩或成绩备注含「免修」。免修是学分认定而非考试——网格里的
+  // 0 分和 0 绩点只是系统占位，不参与任何成绩统计（对齐教务免修不计入
+  // GPA 的惯例），学分单独展示。
+  function isExempt(row) {
+    return String(row.cj || '').indexOf('免修') !== -1 ||
+           String(row.cjbz || '').indexOf('免修') !== -1;
   }
 
   // 重修/补考去重：按课程代码取最高分记录（ADR-0004 第 2 条）
@@ -145,7 +156,12 @@
         continue;
       }
       var cur = best[key];
-      if (s != null && (cur.score == null || s > cur.score)) {
+      // 免修记录优先于一切考试记录（免修认定后原考试记录不再有效）
+      if (isExempt(row) && !isExempt(cur.row)) {
+        best[key] = { row: row, score: s };
+      } else if (!isExempt(row) && isExempt(cur.row)) {
+        // 保持免修记录
+      } else if (s != null && (cur.score == null || s > cur.score)) {
         best[key] = { row: row, score: s };
       }
     }
@@ -204,13 +220,118 @@
     };
   }
 
+  function semesterKey(row) {
+    return (row.xnmmc || '?') + ' 第' + (row.xqmmc || '?') + '学期';
+  }
+  function semesterSortVal(row) {
+    return (toNum(row.xnm) || 0) * 100 + (toNum(row.xqm) || 0);
+  }
+
+  // 插入排序：不依赖 Array.prototype.sort（同属可能被扩展库污染的原型方法）
+  function sortBy(arr, keyFn) {
+    for (var i = 1; i < arr.length; i++) {
+      var cur = arr[i], ck = keyFn(cur), j = i - 1;
+      while (j >= 0 && keyFn(arr[j]) > ck) { arr[j + 1] = arr[j]; j--; }
+      arr[j + 1] = cur;
+    }
+    return arr;
+  }
+
   function computeStats(rawRows) {
-    var rows = dedupeBest(rawRows);
+    // 免修课程剥离：不参与任何成绩/学分统计，单独汇总展示
+    var deduped = dedupeBest(rawRows);
+    var rows = [], exemptList = [], exemptCredits = 0;
+    for (var ei = 0; ei < deduped.length; ei++) {
+      var er = deduped[ei];
+      if (isExempt(er)) {
+        exemptList.push({ name: er.kcmc, credit: toNum(er.xf), semester: semesterKey(er) });
+        exemptCredits += toNum(er.xf) || 0;
+      } else {
+        rows.push(er);
+      }
+    }
+    var degreeRows = select(rows, isDegree);
+
+    // 学期分组（对齐网页版 MetricGrid.semesterGPAs）
+    var semMap = {}, semKeys = [];
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var k = semesterKey(r);
+      if (!semMap[k]) { semMap[k] = { key: k, sort: semesterSortVal(r), rows: [] }; semKeys.push(k); }
+      semMap[k].rows.push(r);
+    }
+    var sems = [];
+    for (i = 0; i < semKeys.length; i++) {
+      var sg = semMap[semKeys[i]];
+      var ag = aggregate(sg.rows);
+      sems.push({ key: sg.key, sort: sg.sort, gpa: ag.gpa, credits: ag.totalCredits, count: ag.count });
+    }
+    sortBy(sems, function (s) { return s.sort; });
+
+    // 挂科列表（对齐网页版 FailingWarningCard）：去重取最高后仍不及格
+    var failing = [];
+    for (i = 0; i < rows.length; i++) {
+      r = rows[i];
+      if (!isPass(r)) {
+        failing.push({ name: r.kcmc, credit: toNum(r.xf), score: scoreOf(r), semester: semesterKey(r) });
+      }
+    }
+
+    // 疑似误输入（对齐网页版 IllegalWarning）：百分制 < 10 分
+    var suspicious = [];
+    for (i = 0; i < rows.length; i++) {
+      r = rows[i];
+      var sc = scoreOf(r);
+      if (sc != null && sc < 10) {
+        suspicious.push({ name: r.kcmc, score: sc, semester: semesterKey(r) });
+      }
+    }
+
     return {
       attempts: rawRows.length,
       overall: aggregate(rows),
-      degree: aggregate(select(rows, isDegree))
+      degree: aggregate(degreeRows),
+      semesters: sems,
+      failing: failing,
+      suspicious: suspicious,
+      exempt: { count: exemptList.length, credits: exemptCredits, list: exemptList },
+      rows: rows
     };
+  }
+
+  // What-If（对齐网页版 WhatIfPanel）：某门课替换为假设分数后重算，
+  // 绩点按校规公式重估（模拟场景无法取教务官方值）
+  function simulate(stats, kch, score) {
+    var sim = [];
+    for (var i = 0; i < stats.rows.length; i++) {
+      var r = stats.rows[i];
+      if ((r.kch || r.kcmc) === kch) {
+        var c = {};
+        for (var k in r) c[k] = r[k];
+        c.jd = (score >= 60 ? (score - 50) / 10 : 0).toFixed(2);
+        c.bfzcj = String(score);
+        c.cj = String(score);
+        sim.push(c);
+      } else {
+        sim.push(r);
+      }
+    }
+    return { overall: aggregate(sim), degree: aggregate(select(sim, isDegree)) };
+  }
+
+  // 目标 GPA 持久化（对齐网页版 profile.targetGPA）
+  var TARGET_KEY = 'jwgpa.targetGPA';
+  function loadTarget() {
+    try {
+      var v = parseFloat(localStorage.getItem(TARGET_KEY));
+      return isNaN(v) ? null : v;
+    } catch (e) { return null; }
+  }
+  function saveTarget(v) {
+    try {
+      if (v == null || isNaN(v)) localStorage.removeItem(TARGET_KEY);
+      else localStorage.setItem(TARGET_KEY, String(v));
+    } catch (e) { /* 无痕模式等场景忽略 */ }
   }
 
   // ---------- UI ----------
@@ -236,7 +357,17 @@
       '#jwgpa-panel .jw-gpa{font-size:34px;font-weight:800;color:#2E9BFF;line-height:1.1;}',
       '#jwgpa-panel .jw-row{display:flex;justify-content:space-between;gap:8px;padding:1px 0;}',
       '#jwgpa-panel .jw-row b{font-variant-numeric:tabular-nums;}',
-      '#jwgpa-panel .jw-sec{margin:8px 0 4px;padding-top:6px;border-top:2px dashed #1A1A1A;font-weight:700;}',
+      '#jwgpa-panel .jw-sech{margin:8px 0 0;padding:5px 4px;border-top:2px dashed #1A1A1A;font-weight:700;cursor:pointer;display:flex;justify-content:space-between;user-select:none;}',
+      '#jwgpa-panel .jw-sech:hover{background:#FFF3C4;}',
+      '#jwgpa-panel .jw-secb{padding:4px 1px 2px;}',
+      '#jwgpa-panel .jw-warn{padding:2px 6px;margin:2px 0;border-left:4px solid #FF4D4D;background:#FFE9E9;font-size:12px;}',
+      '#jwgpa-panel .jw-sus{padding:2px 6px;margin:2px 0;border-left:4px solid #FFD02F;background:#FFF8DC;font-size:12px;}',
+      '#jwgpa-panel .jw-tin{width:56px;border:2px solid #1A1A1A;padding:2px 4px;font:700 13px sans-serif;background:#FFFDF6;color:#1A1A1A;}',
+      '#jwgpa-panel .jw-sem{display:flex;justify-content:space-between;font-size:12px;padding:1px 0;gap:8px;}',
+      '#jwgpa-panel .jw-wi select{width:100%;border:2px solid #1A1A1A;padding:2px;background:#FFFDF6;font-size:12px;margin:2px 0;color:#1A1A1A;}',
+      '#jwgpa-panel .jw-wi input[type=range]{width:100%;}',
+      '#jwgpa-panel .jw-wiout{font-size:12px;margin-top:2px;line-height:1.5;}',
+      '#jwgpa-panel .jw-trend{margin-top:6px;display:block;}',
       '#jwgpa-panel .jw-bar{display:flex;align-items:center;gap:6px;margin:2px 0;}',
       '#jwgpa-panel .jw-bar span{width:52px;flex:none;text-align:right;font-size:12px;}',
       '#jwgpa-panel .jw-bar i{display:block;height:12px;background:#2E9BFF;border:2px solid #1A1A1A;}',
@@ -266,6 +397,89 @@
 
   function fmt(n, d) { return n == null ? '—' : n.toFixed(d); }
 
+  // 分区折叠状态持久化
+  var COLLAPSE_KEY = 'jwgpa.collapsed';
+  function loadCollapsed() {
+    try { return JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function saveCollapsed(m) {
+    try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify(m)); } catch (e) { /* ignore */ }
+  }
+
+  // 可折叠分区：id 稳定，折叠状态存 localStorage
+  function section(parent, id, title, badge, defaultOpen) {
+    var cmap = loadCollapsed();
+    var open = id in cmap ? cmap[id] : !!defaultOpen;
+    var h = el('div', 'jw-sech');
+    var left = el('span');
+    var arrow = el('span', 'jw-arrow', open ? '▾ ' : '▸ ');
+    left.appendChild(arrow);
+    left.appendChild(el('span', null, title));
+    h.appendChild(left);
+    if (badge != null) h.appendChild(el('b', null, String(badge)));
+    var b = el('div', 'jw-secb');
+    b.style.display = open ? '' : 'none';
+    h.onclick = function () {
+      var wasOpen = b.style.display !== 'none';
+      b.style.display = wasOpen ? 'none' : '';
+      arrow.textContent = wasOpen ? '▸ ' : '▾ ';
+      var m = loadCollapsed();
+      m[id] = !wasOpen;
+      saveCollapsed(m);
+    };
+    parent.appendChild(h);
+    parent.appendChild(b);
+    return b;
+  }
+
+  // 学期 GPA 趋势：纯 SVG 折线（仅数值属性，无页面数据注入面）
+  function trendSvg(sems, targetG) {
+    var NS = 'http://www.w3.org/2000/svg';
+    var w = 268, h = 76, padL = 10, padR = 10, padT = 8, padB = 10;
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+    svg.setAttribute('class', 'jw-trend');
+    var n = sems.length;
+    if (!n) return svg;
+    var maxG = 5;
+    var px = function (i) { return n === 1 ? w / 2 : padL + i * (w - padL - padR) / (n - 1); };
+    var py = function (g) { return padT + (1 - Math.min(Math.max(g, 0), maxG) / maxG) * (h - padT - padB); };
+    if (targetG != null) {
+      var tl = document.createElementNS(NS, 'line');
+      tl.setAttribute('x1', padL); tl.setAttribute('x2', w - padR);
+      tl.setAttribute('y1', py(targetG)); tl.setAttribute('y2', py(targetG));
+      tl.setAttribute('stroke', '#FF4D4D'); tl.setAttribute('stroke-width', '1.5');
+      tl.setAttribute('stroke-dasharray', '4 3');
+      svg.appendChild(tl);
+    }
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      if (sems[i].gpa != null) pts.push(px(i) + ',' + py(sems[i].gpa));
+    }
+    var pl = document.createElementNS(NS, 'polyline');
+    pl.setAttribute('points', pts.join(' '));
+    pl.setAttribute('fill', 'none');
+    pl.setAttribute('stroke', '#2E9BFF');
+    pl.setAttribute('stroke-width', '2.5');
+    svg.appendChild(pl);
+    for (i = 0; i < n; i++) {
+      if (sems[i].gpa == null) continue;
+      var c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', px(i));
+      c.setAttribute('cy', py(sems[i].gpa));
+      c.setAttribute('r', '3.5');
+      c.setAttribute('fill', '#FFD02F');
+      c.setAttribute('stroke', '#1A1A1A');
+      c.setAttribute('stroke-width', '1.5');
+      svg.appendChild(c);
+    }
+    return svg;
+  }
+
+  // What-If 控件状态（跨面板重渲染保持）
+  var wiCourse = null, wiScore = null;
+
   function renderPanel(stats) {
     ensureStyle();
     var old = document.getElementById(PANEL_ID);
@@ -289,19 +503,119 @@
 
     var body = el('div', 'jw-b');
     var o = stats.overall, d = stats.degree;
+    var target = loadTarget();
 
-    var gpaBig = el('div', 'jw-gpa', fmt(o.gpa, 2));
-    body.appendChild(gpaBig);
+    // ---- 总览（不折叠）----
+    body.appendChild(el('div', 'jw-gpa', fmt(o.gpa, 2)));
     body.appendChild(row2('学位 GPA', fmt(d.gpa, 2)));
     body.appendChild(row2('加权平均分', fmt(o.weightedAvg, 1) + '（算术 ' + fmt(o.arithAvg, 1) + '）'));
     body.appendChild(row2('学分（已获/已修）', fmt(o.earnedCredits, 1) + ' / ' + fmt(o.totalCredits, 1)));
     body.appendChild(row2('学位学分（已获/已修）', fmt(d.earnedCredits, 1) + ' / ' + fmt(d.totalCredits, 1)));
     body.appendChild(row2('课程门数', o.count + '（学位 ' + d.count + '）'));
     body.appendChild(row2('不及格', o.failCount + ' 门' + (o.nonNumeric ? '；非百分制 ' + o.nonNumeric + ' 门' : '')));
+    if (stats.exempt.count) {
+      body.appendChild(row2('免修', stats.exempt.count + ' 门（' + fmt(stats.exempt.credits, 1) + ' 学分，不计入统计）'));
+    }
     if (o.max) body.appendChild(row2('最高分', o.max.score + ' ' + o.max.name));
     if (o.min) body.appendChild(row2('最低分', o.min.score + ' ' + o.min.name));
 
-    body.appendChild(el('div', 'jw-sec', '分数分布'));
+    // ---- 警告区：挂科列表 + 疑似误输入 ----
+    if (stats.failing.length || stats.suspicious.length) {
+      var wb0 = section(body, 'warn', '警告', stats.failing.length + stats.suspicious.length, true);
+      for (var fi = 0; fi < stats.failing.length; fi++) {
+        var f = stats.failing[fi];
+        wb0.appendChild(el('div', 'jw-warn',
+          '挂科：' + f.name + '　' + (f.score == null ? '无有效分数' : f.score + ' 分') +
+          '　' + fmt(f.credit, 1) + ' 学分　' + f.semester));
+      }
+      for (var si = 0; si < stats.suspicious.length; si++) {
+        var su = stats.suspicious[si];
+        wb0.appendChild(el('div', 'jw-sus',
+          '疑似误输入：' + su.name + '　' + su.score + ' 分（<10 分，已按校规计 0 绩点）　' + su.semester));
+      }
+    }
+
+    // ---- 目标 GPA ----
+    var tb = section(body, 'target', '目标 GPA', target == null ? '未设置' : target.toFixed(2), true);
+    var trow = el('div', 'jw-row');
+    trow.appendChild(el('span', null, '设定目标'));
+    var tin = el('input', 'jw-tin');
+    tin.type = 'number'; tin.step = '0.1'; tin.min = '0'; tin.max = '5';
+    if (target != null) tin.value = target.toFixed(2);
+    tin.onchange = function () {
+      var v = parseFloat(tin.value);
+      saveTarget(isNaN(v) ? null : v);
+      run();
+    };
+    trow.appendChild(tin);
+    tb.appendChild(trow);
+    if (target != null) {
+      if (o.gpa != null) {
+        var diff = o.gpa - target;
+        tb.appendChild(row2('总 GPA 差距', (diff >= 0 ? '+' : '') + diff.toFixed(2) + (diff >= 0 ? '（已达标）' : '')));
+      }
+      if (d.gpa != null) {
+        var ddiff = d.gpa - target;
+        tb.appendChild(row2('学位 GPA 差距', (ddiff >= 0 ? '+' : '') + ddiff.toFixed(2) + (ddiff >= 0 ? '（已达标）' : '')));
+      }
+    }
+
+    // ---- 各学期 GPA + 趋势 ----
+    if (stats.semesters.length) {
+      var sb = section(body, 'sems', '各学期', stats.semesters.length + ' 个', false);
+      for (var mi = 0; mi < stats.semesters.length; mi++) {
+        var sm = stats.semesters[mi];
+        var srow = el('div', 'jw-sem');
+        srow.appendChild(el('span', null, sm.key));
+        srow.appendChild(el('b', null,
+          'GPA ' + fmt(sm.gpa, 2) + ' · ' + fmt(sm.credits, 1) + ' 学分 · ' + sm.count + ' 门'));
+        sb.appendChild(srow);
+      }
+      sb.appendChild(trendSvg(stats.semesters, target));
+    }
+
+    // ---- What-If 假设分析 ----
+    if (stats.rows.length) {
+      var wib = section(body, 'whatif', '假设分析', null, false);
+      wib.className += ' jw-wi';
+      var sel = el('select');
+      for (var ci = 0; ci < stats.rows.length; ci++) {
+        var cr = stats.rows[ci];
+        var opt = el('option', null, cr.kcmc + '（' + semesterKey(cr) + '）');
+        opt.value = cr.kch || cr.kcmc;
+        sel.appendChild(opt);
+      }
+      if (wiCourse) sel.value = wiCourse;
+      if (sel.selectedIndex < 0) sel.selectedIndex = 0;
+      wiCourse = sel.value;
+      var slider = el('input');
+      slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.step = '1';
+      var out = el('div', 'jw-wiout');
+      var refresh = function () {
+        var row = null;
+        for (var ri = 0; ri < stats.rows.length; ri++) {
+          if ((stats.rows[ri].kch || stats.rows[ri].kcmc) === wiCourse) { row = stats.rows[ri]; break; }
+        }
+        if (!row) return;
+        if (wiScore == null) wiScore = scoreOf(row);
+        if (wiScore == null) wiScore = 60;
+        slider.value = String(wiScore);
+        var res = simulate(stats, wiCourse, wiScore);
+        out.textContent = '';
+        out.appendChild(row2('假设此科 ' + wiScore + ' 分', ''));
+        out.appendChild(row2('总 GPA', fmt(o.gpa, 2) + ' → ' + fmt(res.overall.gpa, 2)));
+        out.appendChild(row2('学位 GPA', fmt(d.gpa, 2) + ' → ' + fmt(res.degree.gpa, 2)));
+      };
+      sel.onchange = function () { wiCourse = sel.value; wiScore = null; refresh(); };
+      slider.oninput = function () { wiScore = parseInt(slider.value, 10); refresh(); };
+      wib.appendChild(sel);
+      wib.appendChild(slider);
+      wib.appendChild(out);
+      refresh();
+    }
+
+    // ---- 分数分布 ----
+    var db = section(body, 'dist', '分数分布', null, true);
     var maxN = Math.max.apply(null, o.dist.concat([1]));
     for (var di2 = 0; di2 < o.dist.length; di2++) {
       var n = o.dist[di2];
@@ -311,11 +625,12 @@
       i2.style.width = Math.round((n / maxN) * 140) + 'px';
       bar.appendChild(i2);
       bar.appendChild(el('em', null, String(n)));
-      body.appendChild(bar);
+      db.appendChild(bar);
     }
 
     body.appendChild(el('div', 'jw-note',
-      '共 ' + stats.attempts + ' 条成绩记录，同课程多次修读已按最高分去重；绩点取教务官方值。'));
+      '共 ' + stats.attempts + ' 条成绩记录，同课程多次修读已按最高分去重；绩点取教务官方值' +
+      (stats.exempt.count ? '；免修 ' + stats.exempt.count + ' 门不参与统计' : '') + '。'));
     panel.appendChild(body);
     document.body.appendChild(panel);
   }
@@ -332,7 +647,7 @@
   // ---------- 主流程 ----------
 
   var api = {
-    version: '1.0.6',
+    version: '1.1.0',
     parseRows: parseRows,
     computeStats: computeStats,
     isDegree: isDegree,
