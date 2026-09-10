@@ -1,6 +1,6 @@
 # 深色模式根因修复 + Supabase 全量移除
 
-Status: ready-for-agent
+Status: done
 Date: 2026-08-30
 Decides: ADR-0002（移除云同步，取代 ADR-0001）
 
@@ -72,3 +72,4 @@ Decides: ADR-0002（移除云同步，取代 ADR-0001）
 
 - 2026-08-30：已实现并提交（`4002b2b`，前置 `bc7799e` 为 tracker 切换）。TDD：新增 `tests/stores/app.test.js`（4 例）先行红后绿。code-review 双轴评审发现一处回归（ProfileSwitcher 误写 `targetGpa`）并已修复。验收：34/34 测试通过，`npm run build` 成功，`rg` 确认无残留引用。
 - 2026-08-30：深色模式切换验证通过（38/38 测试、构建成功、浏览器实测三态切换、`localStorage` 持久化与深色下卡片取色）。附注：自动化浏览器会在每次页面加载约 160ms 后注入脚本把 `data-theme` 重置为 light——在无任何应用代码的静态页上复现，属测试环境产物而非应用缺陷；调试埋点已全部移除，真实浏览器表现以手动验证为准。顺带补修四个组件的硬编码浅色（目标达成分析绿、危险操作/挂科预警/非法成绩警示红），新增 `--accent-border` 与 `--danger-*` 变量及 `tests/components/theme-variables.test.js`（4 例）。
+- 2026-09-10：随 v2.1.0 发布关闭。

@@ -2,6 +2,7 @@
     "name": "学位绩点计算器",
     "short_name": "GPA",
     "description": "一个现代化的 GPA 计算器",
+    "version": "2.1.0",
     "id": "https://gpa.gxb.pub",
     "start_url": "/",
     "scope": "/",

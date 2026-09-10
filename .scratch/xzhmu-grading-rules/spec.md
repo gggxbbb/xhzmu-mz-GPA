@@ -1,6 +1,6 @@
 # 学位绩点计算对齐徐医（xzhmu）官方规则
 
-Status: ready-for-agent
+Status: done
 
 ## Problem Statement
 
@@ -63,3 +63,7 @@ Status: ready-for-agent
 - 校规出处需长期可考：徐州医科大学信息公开网《徐州医科大学本科生学籍管理规定》，条款号见 ADR-0004。
 - 已录入不及格成绩的历史数据在本修复后 GPA 显示值会上升（负绩点 → 0），这是修正而非回归。
 - 换算表在 < 60 处存在不连续（59 → 0，60 → 1.0），requiredAverageForTarget 的 60 下限正是这一事实的直接推论，不要「优化」掉。
+
+## Comments
+
+- 2026-09-10：已实现并提交（`50214ec`）。src 侧改动与 spec 一致，测试切换到新契约（tests/useGPA.test.js 扩至 17 例、新增 TargetAnalysisCard 5 例），75/75 全绿。挂科 0 绩点、60 下限、不可达三态均覆盖。随 v2.1.0 发布关闭。

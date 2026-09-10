@@ -1,6 +1,6 @@
 # 新粗野主义 UI 改版
 
-**Status:** ready-for-agent
+**Status:** done
 
 ## Problem Statement
 
@@ -63,3 +63,7 @@
 ## Further Notes
 
 - Theme resolution inline script in `index.html` and `isDark` computed in the app store must stay consistent — the redesign does not touch theme *resolution*, only theme *values*.
+
+## Comments
+
+- 2026-09-10：全部 7 个 ticket 完成（b0d127a → 3e0ffaa merge），后续跟进 163816b（useThemeTokens 抽取、PWA chrome 颜色）与 cf03e3e（stat chips 等宽网格、硬阴影裁切修复）。验收：测试全绿、构建成功、三态主题浏览器实测。随 v2.1.0 发布关闭。
