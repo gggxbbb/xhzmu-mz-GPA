@@ -11,7 +11,7 @@ npm test         # vitest
 npm run build    # 产物构建
 ```
 
-## userscripts/ — 教务成绩 GPA 统计（油猴脚本）
+## public/userscripts/ — 教务成绩 GPA 统计（油猴脚本）
 
 **功能**
 
@@ -29,7 +29,11 @@ npm run build    # 产物构建
 **安装**
 
 1. 浏览器安装 Tampermonkey 扩展
-2. 把 `userscripts/jwpt-gpa.user.js` **拖进浏览器窗口**，在油猴安装页确认（推荐此方式，按原始字节安装；复制粘贴可能被中间环节改写源码）
+2. 打开本站「我的」页面，在「教务成绩助手」中点击「安装油猴脚本」，在脚本管理器安装页确认。若浏览器仅显示源码，可将脚本链接添加到脚本管理器中安装。
+
+也可把 `public/userscripts/jwpt-gpa.user.js` **拖进浏览器窗口**，在油猴安装页确认（按原始字节安装；复制粘贴可能被中间环节改写源码）。
+
+脚本由 Vite 原样复制到 `dist/userscripts/jwpt-gpa.user.js`，保留元信息和 `.user.js` 文件名，不参与应用代码打包或压缩。安装入口使用 Vite 的 `BASE_URL`，支持子路径部署；本地 `npm run dev` 和 `npm run preview` 也可访问脚本链接。
 
 **使用**
 

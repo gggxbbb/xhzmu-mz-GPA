@@ -7,6 +7,9 @@
     <section class="profile-group" aria-label="显示设置">
       <DisplaySettings />
     </section>
+    <section class="profile-group" aria-label="教务成绩助手">
+      <UserscriptInstallCard />
+    </section>
     <section class="profile-group" aria-label="导入导出">
       <ImportExportCard />
     </section>
@@ -48,6 +51,7 @@ import ProfileSwitcher from '../components/ProfileSwitcher.vue'
 import CourseConfigEditor from '../components/CourseConfigEditor.vue'
 import ImportExportCard from '../components/ImportExportCard.vue'
 import DisplaySettings from '../components/DisplaySettings.vue'
+import UserscriptInstallCard from '../components/UserscriptInstallCard.vue'
 import DangerZone from '../components/DangerZone.vue'
 
 const appStore = useAppStore()
